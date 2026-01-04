@@ -254,7 +254,7 @@ func play_animation() -> void:
 	card_played.emit(self)
 
 
-func get_tooltip_text() -> String:
+func get_card_tooltip() -> String:
 	if card_data:
 		return card_data.get_tooltip()
 	return ""
