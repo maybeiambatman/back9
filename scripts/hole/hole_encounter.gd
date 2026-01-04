@@ -50,11 +50,15 @@ var played_cards_this_phase: Array[CardData] = []
 @onready var result_popup: Panel = $ResultPopup
 @onready var result_label: Label = $ResultPopup/ResultLabel
 
+# Hole layout display
+var hole_layout_label: Label = null
+
 
 func _ready() -> void:
 	end_phase_button.pressed.connect(_on_end_phase)
 	card_hand.card_selected.connect(_on_card_selected)
 	card_hand.card_deselected.connect(_on_card_deselected)
+	card_hand.card_play_requested.connect(_on_card_play_requested)
 
 	result_popup.visible = false
 
@@ -66,6 +70,10 @@ func _ensure_ui_exists() -> void:
 	## Create UI elements programmatically if they don't exist
 	if hud_panel == null:
 		_create_ui()
+
+	# Always create hole layout if it doesn't exist
+	if hole_layout_label == null:
+		_create_hole_layout_display()
 
 
 func _create_ui() -> void:
@@ -214,6 +222,48 @@ func _create_ui() -> void:
 		card_hand.card_deselected.connect(_on_card_deselected)
 
 
+func _create_hole_layout_display() -> void:
+	## Create the ASCII hole layout display
+	var layout_panel = Panel.new()
+	layout_panel.name = "HoleLayoutPanel"
+	layout_panel.position = Vector2(450, 20)
+	layout_panel.size = Vector2(500, 420)
+	add_child(layout_panel)
+
+	var panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.05, 0.08, 0.05, 0.95)
+	panel_style.corner_radius_top_left = 10
+	panel_style.corner_radius_top_right = 10
+	panel_style.corner_radius_bottom_left = 10
+	panel_style.corner_radius_bottom_right = 10
+	panel_style.border_width_left = 2
+	panel_style.border_width_right = 2
+	panel_style.border_width_top = 2
+	panel_style.border_width_bottom = 2
+	panel_style.border_color = Color(0.3, 0.5, 0.3)
+	layout_panel.add_theme_stylebox_override("panel", panel_style)
+
+	hole_layout_label = Label.new()
+	hole_layout_label.name = "HoleLayoutLabel"
+	hole_layout_label.position = Vector2(10, 10)
+	hole_layout_label.size = Vector2(480, 400)
+	hole_layout_label.add_theme_font_size_override("font_size", 14)
+	hole_layout_label.add_theme_color_override("font_color", Color(0.8, 0.9, 0.8))
+	hole_layout_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	layout_panel.add_child(hole_layout_label)
+
+
+func _update_hole_layout() -> void:
+	## Update the ASCII hole layout display
+	if hole_layout_label == null or hole_data == null:
+		return
+
+	var layout = HoleLayoutGenerator.generate_layout(hole_data, distance_remaining, on_green)
+	var layout_text = layout.render()
+	layout_text += "\n\n" + HoleLayoutGenerator.get_legend()
+	hole_layout_label.text = layout_text
+
+
 func start_hole(data: HoleData) -> void:
 	hole_data = data
 	distance_remaining = data.total_distance
@@ -281,6 +331,11 @@ func _on_card_selected(card: Card) -> void:
 
 func _on_card_deselected() -> void:
 	pass
+
+
+func _on_card_play_requested(_card: Card) -> void:
+	# When clicking a selected card, play it
+	play_selected_card()
 
 
 func play_selected_card() -> void:
@@ -580,6 +635,9 @@ func update_ui() -> void:
 	# Score
 	if score_label:
 		score_label.text = "Score: %s" % RunManager.get_current_score_string()
+
+	# Update hole layout visualization
+	_update_hole_layout()
 
 
 func _add_played_card_display(card_data: CardData) -> void:

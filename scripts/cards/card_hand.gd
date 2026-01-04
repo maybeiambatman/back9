@@ -4,6 +4,7 @@ class_name CardHand
 
 signal card_selected(card: Card)
 signal card_deselected()
+signal card_play_requested(card: Card)  # Emitted when clicking a selected card
 signal card_played(card: Card, card_data: CardData)
 
 @export var card_scene: PackedScene
@@ -95,10 +96,8 @@ func arrange_cards() -> void:
 
 func _on_card_clicked(card: Card) -> void:
 	if selected_card == card:
-		# Deselect
-		card.deselect()
-		selected_card = null
-		card_deselected.emit()
+		# Clicking selected card = play it
+		card_play_requested.emit(card)
 	else:
 		# Select new card
 		if selected_card:

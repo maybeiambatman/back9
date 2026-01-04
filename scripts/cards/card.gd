@@ -43,6 +43,7 @@ func _setup_card_visuals() -> void:
 	# Main card panel
 	card_panel = Panel.new()
 	card_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card_panel.mouse_filter = Control.MOUSE_FILTER_PASS  # Allow clicks through to Card
 	add_child(card_panel)
 
 	# Create card style
@@ -120,6 +121,7 @@ func _setup_card_visuals() -> void:
 	# Hover highlight (initially hidden)
 	hover_highlight = Panel.new()
 	hover_highlight.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hover_highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block input
 	hover_highlight.visible = false
 	var highlight_style = StyleBoxFlat.new()
 	highlight_style.bg_color = Color(1, 1, 1, 0.1)
