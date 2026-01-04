@@ -1,0 +1,150 @@
+[gd_scene load_steps=3 format=3 uid="uid://c2vxn7p4q8k2m"]
+
+[ext_resource type="Script" path="res://scripts/hole/hole_encounter.gd" id="1_encounter"]
+[ext_resource type="PackedScene" uid="uid://bqr4p5h6n8c2w" path="res://scenes/cards/card_hand.tscn" id="2_hand"]
+
+[node name="HoleEncounter" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_encounter")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.15, 0.1, 1)
+
+[node name="HUD" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 320.0
+
+[node name="HoleInfo" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 390.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 20
+text = "Hole 1 - Par 4"
+
+[node name="PhaseLabel" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 45.0
+offset_right = 390.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 16
+text = "Phase: TEE SHOT"
+
+[node name="DistanceLabel" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 75.0
+offset_right = 390.0
+offset_bottom = 100.0
+theme_override_font_sizes/font_size = 16
+text = "Distance: 420 yards"
+
+[node name="WindLabel" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 105.0
+offset_right = 390.0
+offset_bottom = 130.0
+theme_override_font_sizes/font_size = 14
+text = "Wind: ???"
+
+[node name="LieLabel" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 130.0
+offset_right = 390.0
+offset_bottom = 155.0
+theme_override_font_sizes/font_size = 14
+text = "Lie: Tee"
+
+[node name="ConfidenceLabel" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 165.0
+offset_right = 390.0
+offset_bottom = 190.0
+theme_override_colors/font_color = Color(0.9, 0.7, 0.2, 1)
+theme_override_font_sizes/font_size = 16
+text = "Confidence: ●●● (3/3)"
+
+[node name="StrokesLabel" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 195.0
+offset_right = 390.0
+offset_bottom = 220.0
+theme_override_font_sizes/font_size = 14
+text = "Strokes: 0 (Par 4)"
+
+[node name="StatusLabel" type="Label" parent="HUD"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 225.0
+offset_right = 390.0
+offset_bottom = 275.0
+theme_override_colors/font_color = Color(0.7, 0.9, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = ""
+
+[node name="ScoreLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1700.0
+offset_top = 20.0
+offset_right = 1900.0
+offset_bottom = 60.0
+theme_override_font_sizes/font_size = 24
+text = "Score: E"
+horizontal_alignment = 2
+
+[node name="PlayedCards" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 440.0
+offset_top = 100.0
+offset_right = 1040.0
+offset_bottom = 150.0
+
+[node name="EndPhaseButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1700.0
+offset_top = 900.0
+offset_right = 1880.0
+offset_bottom = 950.0
+text = "END PHASE"
+
+[node name="ResultPopup" type="Panel" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 760.0
+offset_top = 465.0
+offset_right = 1160.0
+offset_bottom = 615.0
+
+[node name="ResultLabel" type="Label" parent="ResultPopup"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardHand" parent="." instance=ExtResource("2_hand")]
+layout_mode = 1

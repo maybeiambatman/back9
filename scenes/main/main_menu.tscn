@@ -1,0 +1,146 @@
+[gd_scene load_steps=2 format=3 uid="uid://bm3r6h7p5k4n2"]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.1, 0.05, 1)
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 660.0
+offset_top = 100.0
+offset_right = 1260.0
+offset_bottom = 200.0
+theme_override_colors/font_color = Color(0.9, 0.85, 0.7, 1)
+theme_override_font_sizes/font_size = 72
+text = "BACK NINE"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 660.0
+offset_top = 200.0
+offset_right = 1260.0
+offset_bottom = 250.0
+theme_override_colors/font_color = Color(0.6, 0.6, 0.5, 1)
+theme_override_font_sizes/font_size = 24
+text = "A Golf Roguelike Deckbuilder"
+horizontal_alignment = 1
+
+[node name="MenuContainer" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 810.0
+offset_top = 400.0
+offset_right = 1110.0
+offset_bottom = 700.0
+
+[node name="NewGameButton" type="Button" parent="MenuContainer"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "New Game"
+
+[node name="ContinueButton" type="Button" parent="MenuContainer"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Continue"
+
+[node name="StatsButton" type="Button" parent="MenuContainer"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Statistics"
+
+[node name="QuitButton" type="Button" parent="MenuContainer"]
+custom_minimum_size = Vector2(300, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Quit"
+
+[node name="TrinketSelect" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TrinketBG" type="ColorRect" parent="TrinketSelect"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.08, 0.05, 0.95)
+
+[node name="TrinketTitle" type="Label" parent="TrinketSelect"]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 30.0
+offset_right = 650.0
+offset_bottom = 80.0
+theme_override_font_sizes/font_size = 32
+text = "Choose Your Caddie"
+
+[node name="StatsPanel" type="Panel" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 1400.0
+offset_top = 300.0
+offset_right = 1850.0
+offset_bottom = 700.0
+
+[node name="StatsPanelBG" type="ColorRect" parent="StatsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.1, 0.1, 0.95)
+
+[node name="StatsTitle" type="Label" parent="StatsPanel"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 440.0
+offset_bottom = 50.0
+theme_override_font_sizes/font_size = 24
+text = "Statistics"
+
+[node name="StatsLabel" type="Label" parent="StatsPanel"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 60.0
+offset_right = 440.0
+offset_bottom = 380.0
+theme_override_font_sizes/font_size = 16
+text = "Loading..."
+
+[node name="VersionLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 1040.0
+offset_right = 300.0
+offset_bottom = 1070.0
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+theme_override_font_sizes/font_size = 14
+text = "Version 0.1.0 - Development Build"
