@@ -220,6 +220,7 @@ func _create_ui() -> void:
 		add_child(card_hand)
 		card_hand.card_selected.connect(_on_card_selected)
 		card_hand.card_deselected.connect(_on_card_deselected)
+		card_hand.card_play_requested.connect(_on_card_play_requested)
 
 
 func _create_hole_layout_display() -> void:
