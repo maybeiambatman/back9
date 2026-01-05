@@ -77,7 +77,15 @@ controls.maxPolarAngle = Math.PI / 2.2;
 controls.target.set(0, 0, 0);
 
 // Create terrain
-const { terrain, water } = createTerrain(scene);
+let terrain, water;
+try {
+  const result = createTerrain(scene);
+  terrain = result.terrain;
+  water = result.water;
+  console.log('Terrain created successfully');
+} catch (err) {
+  console.error('Failed to create terrain:', err);
+}
 
 // Systems
 const audio = new AudioSystem();
