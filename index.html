@@ -1,13 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Back Nine - Golf Roguelike Deckbuilder</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Links - Golf Course Builder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <!-- Top Left UI -->
+  <div id="score-panel" class="ui-panel top-left">
+    <div class="score-display">
+      <span class="label">Score</span>
+      <span id="score-value" class="value">0</span>
+    </div>
+    <div class="unlock-progress">
+      <span class="label">Next unlock: <span id="next-unlock-points">500</span></span>
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <span id="next-unlock-name" class="unlock-name">Pack 2: Hazards</span>
+    </div>
+    <div class="terrain-name">
+      Terrain: <span id="terrain-name">Meadow</span>
+    </div>
+  </div>
+
+  <!-- Top Right UI -->
+  <div id="controls-panel" class="ui-panel top-right">
+    <button id="btn-sound" class="icon-btn" title="Toggle Sound">🔊</button>
+    <button id="btn-screenshot" class="icon-btn" title="Screenshot">📸</button>
+    <button id="btn-clear" class="icon-btn" title="Clear All">🗑️</button>
+  </div>
+
+  <!-- Point Preview (shows when placing) -->
+  <div id="point-preview" class="point-preview hidden">+0</div>
+
+  <!-- Bottom Element Tray -->
+  <div id="element-tray" class="element-tray">
+    <div class="pack-section" data-pack="1">
+      <div class="pack-label">Basics</div>
+      <div class="pack-elements">
+        <button class="element-btn" data-element="tee" title="Tee Box (+10)">
+          <div class="element-icon tee-icon"></div>
+          <span>Tee</span>
+        </button>
+        <button class="element-btn" data-element="fairway" title="Fairway (+5)">
+          <div class="element-icon fairway-icon"></div>
+          <span>Fairway</span>
+        </button>
+        <button class="element-btn" data-element="green" title="Green (+15)">
+          <div class="element-icon green-icon"></div>
+          <span>Green</span>
+        </button>
+        <button class="element-btn" data-element="cartpath" title="Cart Path (+5)">
+          <div class="element-icon cartpath-icon"></div>
+          <span>Path</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="pack-section" data-pack="2">
+      <div class="pack-label">Hazards</div>
+      <div class="pack-elements">
+        <button class="element-btn locked" data-element="bunker" title="Bunker (+10)">
+          <div class="element-icon bunker-icon"></div>
+          <span>Bunker</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+        <button class="element-btn locked" data-element="pond" title="Pond (+20)">
+          <div class="element-icon pond-icon"></div>
+          <span>Pond</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="pack-section" data-pack="3">
+      <div class="pack-label">Nature</div>
+      <div class="pack-elements">
+        <button class="element-btn locked" data-element="tree" title="Tree (+8)">
+          <div class="element-icon tree-icon"></div>
+          <span>Tree</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+        <button class="element-btn locked" data-element="treecluster" title="Tree Cluster (+20)">
+          <div class="element-icon treecluster-icon"></div>
+          <span>Trees</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+        <button class="element-btn locked" data-element="flowers" title="Flowers (+5)">
+          <div class="element-icon flowers-icon"></div>
+          <span>Flowers</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+        <button class="element-btn locked" data-element="boulder" title="Boulder (+8)">
+          <div class="element-icon boulder-icon"></div>
+          <span>Boulder</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="pack-section" data-pack="4">
+      <div class="pack-label">Structures</div>
+      <div class="pack-elements">
+        <button class="element-btn locked" data-element="clubhouse" title="Clubhouse (+40)">
+          <div class="element-icon clubhouse-icon"></div>
+          <span>Clubhouse</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+        <button class="element-btn locked" data-element="bridge" title="Bridge (+25)">
+          <div class="element-icon bridge-icon"></div>
+          <span>Bridge</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+        <button class="element-btn locked" data-element="bench" title="Bench (+10)">
+          <div class="element-icon bench-icon"></div>
+          <span>Bench</span>
+          <div class="lock-overlay">🔒</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions overlay -->
+  <div id="instructions" class="instructions">
+    <p>Click element to select • Click terrain to place • Right-click to cancel • Click placed element to remove</p>
+  </div>
+
+  <!-- Unlock notification -->
+  <div id="unlock-notification" class="unlock-notification hidden">
+    <div class="unlock-content">
+      <div class="unlock-icon">🎉</div>
+      <div class="unlock-text">
+        <span class="unlock-title">Pack Unlocked!</span>
+        <span id="unlock-pack-name" class="unlock-pack-name">Hazards</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screenshot mode watermark -->
+  <div id="watermark" class="watermark hidden">Links</div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
 </html>
