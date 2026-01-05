@@ -17,7 +17,6 @@ export const ELEMENT_TYPES = {
   bench: { name: 'Bench', basePoints: 10, pack: 4, connectable: false }
 };
 
-// Grid size for connections (should match placement snap)
 const GRID_SIZE = 0.5;
 const CONNECTION_DISTANCE = GRID_SIZE * 1.5;
 
@@ -29,13 +28,13 @@ export function createElement(type, position, neighbors = { north: false, south:
       element = createTeeBox();
       break;
     case 'fairway':
-      element = createConnectableFairway(neighbors);
+      element = createFairway(neighbors);
       break;
     case 'green':
       element = createGreen();
       break;
     case 'cartpath':
-      element = createConnectablePath(neighbors);
+      element = createPath(neighbors);
       break;
     case 'bunker':
       element = createBunker();
@@ -69,6 +68,7 @@ export function createElement(type, position, neighbors = { north: false, south:
   }
 
   element.position.copy(position);
+  element.position.y = 0.01; // Slightly above terrain
   element.userData.elementType = type;
   element.userData.isPlaceable = true;
   element.userData.neighbors = neighbors;
@@ -76,7 +76,6 @@ export function createElement(type, position, neighbors = { north: false, south:
   return element;
 }
 
-// Find neighbors for a given position in the placements array
 export function findNeighbors(x, z, placements, matchType) {
   const neighbors = { north: false, south: false, east: false, west: false };
 
@@ -88,7 +87,6 @@ export function findNeighbors(x, z, placements, matchType) {
     const dist = Math.sqrt(dx * dx + dz * dz);
 
     if (dist < CONNECTION_DISTANCE && dist > 0.1) {
-      // Determine direction
       if (Math.abs(dz) > Math.abs(dx)) {
         if (dz < 0) neighbors.north = true;
         else neighbors.south = true;
@@ -102,7 +100,6 @@ export function findNeighbors(x, z, placements, matchType) {
   return neighbors;
 }
 
-// Update all connected neighbors after placing a new tile
 export function updateConnectedNeighbors(scene, placements, newPlacement) {
   const type = newPlacement.type;
   if (!ELEMENT_TYPES[type]?.connectable) return;
@@ -110,7 +107,6 @@ export function updateConnectedNeighbors(scene, placements, newPlacement) {
   const x = newPlacement.position.x;
   const z = newPlacement.position.z;
 
-  // Find and update all neighbors of the same type
   for (const p of placements) {
     if (p === newPlacement) continue;
     if (p.type !== type) continue;
@@ -120,10 +116,7 @@ export function updateConnectedNeighbors(scene, placements, newPlacement) {
     const dist = Math.sqrt(dx * dx + dz * dz);
 
     if (dist < CONNECTION_DISTANCE) {
-      // This is a neighbor - update it
       const newNeighbors = findNeighbors(p.position.x, p.position.z, placements, type);
-
-      // Remove old mesh and create new one with updated connections
       scene.remove(p.mesh);
       const newMesh = createElement(type, p.position, newNeighbors);
       scene.add(newMesh);
@@ -132,7 +125,6 @@ export function updateConnectedNeighbors(scene, placements, newPlacement) {
     }
   }
 
-  // Also update the new placement itself with its neighbors
   const newNeighbors = findNeighbors(x, z, placements, type);
   scene.remove(newPlacement.mesh);
   const updatedMesh = createElement(type, newPlacement.position, newNeighbors);
@@ -140,151 +132,96 @@ export function updateConnectedNeighbors(scene, placements, newPlacement) {
   newPlacement.mesh = updatedMesh;
 }
 
-// Create connectable fairway that extends toward neighbors
-function createConnectableFairway(neighbors) {
-  const group = new THREE.Group();
-  const fairwayMat = new THREE.MeshLambertMaterial({ color: COLORS.fairway });
-
-  // Base circle
-  const baseGeom = new THREE.CircleGeometry(0.6, 16);
-  baseGeom.rotateX(-Math.PI / 2);
-  const base = new THREE.Mesh(baseGeom, fairwayMat);
-  base.position.y = 0.03;
-  base.receiveShadow = true;
-  group.add(base);
-
-  // Add connection arms toward neighbors
-  const armLength = 0.5;
-  const armWidth = 0.8;
-
-  if (neighbors.north) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armWidth, 0.05, armLength),
-      fairwayMat
-    );
-    arm.position.set(0, 0.03, -armLength / 2 - 0.3);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  if (neighbors.south) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armWidth, 0.05, armLength),
-      fairwayMat
-    );
-    arm.position.set(0, 0.03, armLength / 2 + 0.3);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  if (neighbors.east) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armLength, 0.05, armWidth),
-      fairwayMat
-    );
-    arm.position.set(armLength / 2 + 0.3, 0.03, 0);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  if (neighbors.west) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armLength, 0.05, armWidth),
-      fairwayMat
-    );
-    arm.position.set(-armLength / 2 - 0.3, 0.03, 0);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  return group;
+// Clean flat circle helper
+function createCircle(radius, color) {
+  const geom = new THREE.CircleGeometry(radius, 32);
+  geom.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide });
+  return new THREE.Mesh(geom, mat);
 }
 
-// Create connectable cart path
-function createConnectablePath(neighbors) {
-  const group = new THREE.Group();
-  const pathMat = new THREE.MeshLambertMaterial({ color: COLORS.cartPath });
+// Clean rectangle helper
+function createRect(width, height, color) {
+  const geom = new THREE.PlaneGeometry(width, height);
+  geom.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide });
+  return new THREE.Mesh(geom, mat);
+}
 
-  // Base circle (smaller than fairway)
-  const baseGeom = new THREE.CircleGeometry(0.3, 12);
-  baseGeom.rotateX(-Math.PI / 2);
-  const base = new THREE.Mesh(baseGeom, pathMat);
-  base.position.y = 0.04;
-  base.receiveShadow = true;
-  group.add(base);
+// Rounded rectangle helper
+function createRoundedRect(width, height, radius, color) {
+  const shape = new THREE.Shape();
+  const x = -width / 2;
+  const y = -height / 2;
 
-  // Add connection arms toward neighbors
-  const armLength = 0.5;
-  const armWidth = 0.4;
+  shape.moveTo(x + radius, y);
+  shape.lineTo(x + width - radius, y);
+  shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+  shape.lineTo(x + width, y + height - radius);
+  shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  shape.lineTo(x + radius, y + height);
+  shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+  shape.lineTo(x, y + radius);
+  shape.quadraticCurveTo(x, y, x + radius, y);
 
-  if (neighbors.north) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armWidth, 0.05, armLength),
-      pathMat
-    );
-    arm.position.set(0, 0.04, -armLength / 2 - 0.1);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  if (neighbors.south) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armWidth, 0.05, armLength),
-      pathMat
-    );
-    arm.position.set(0, 0.04, armLength / 2 + 0.1);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  if (neighbors.east) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armLength, 0.05, armWidth),
-      pathMat
-    );
-    arm.position.set(armLength / 2 + 0.1, 0.04, 0);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  if (neighbors.west) {
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(armLength, 0.05, armWidth),
-      pathMat
-    );
-    arm.position.set(-armLength / 2 - 0.1, 0.04, 0);
-    arm.receiveShadow = true;
-    group.add(arm);
-  }
-
-  return group;
+  const geom = new THREE.ShapeGeometry(shape);
+  geom.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide });
+  return new THREE.Mesh(geom, mat);
 }
 
 function createTeeBox() {
   const group = new THREE.Group();
 
-  // Tee surface
-  const teeGeom = new THREE.BoxGeometry(1.5, 0.1, 1);
-  const teeMat = new THREE.MeshLambertMaterial({ color: COLORS.fairway });
-  const tee = new THREE.Mesh(teeGeom, teeMat);
-  tee.position.y = 0.05;
-  tee.castShadow = true;
-  tee.receiveShadow = true;
+  // Rounded rectangle tee
+  const tee = createRoundedRect(1.2, 0.8, 0.15, COLORS.tee);
+  tee.position.y = 0.01;
   group.add(tee);
 
-  // Tee markers
-  const markerGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.25, 8);
-  const markerMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-
-  const marker1 = new THREE.Mesh(markerGeom, markerMat);
-  marker1.position.set(-0.5, 0.15, 0);
-  marker1.castShadow = true;
+  // Two small marker dots
+  const marker1 = createCircle(0.08, 0xffffff);
+  marker1.position.set(-0.35, 0.02, 0);
   group.add(marker1);
 
-  const marker2 = new THREE.Mesh(markerGeom, markerMat);
-  marker2.position.set(0.5, 0.15, 0);
-  marker2.castShadow = true;
+  const marker2 = createCircle(0.08, 0xffffff);
+  marker2.position.set(0.35, 0.02, 0);
   group.add(marker2);
+
+  return group;
+}
+
+function createFairway(neighbors) {
+  const group = new THREE.Group();
+
+  // Base circle
+  const base = createCircle(0.4, COLORS.fairway);
+  base.position.y = 0.01;
+  group.add(base);
+
+  // Connection arms
+  const armLength = 0.35;
+  const armWidth = 0.5;
+
+  if (neighbors.north) {
+    const arm = createRect(armWidth, armLength, COLORS.fairway);
+    arm.position.set(0, 0.01, -armLength / 2 - 0.2);
+    group.add(arm);
+  }
+  if (neighbors.south) {
+    const arm = createRect(armWidth, armLength, COLORS.fairway);
+    arm.position.set(0, 0.01, armLength / 2 + 0.2);
+    group.add(arm);
+  }
+  if (neighbors.east) {
+    const arm = createRect(armLength, armWidth, COLORS.fairway);
+    arm.position.set(armLength / 2 + 0.2, 0.01, 0);
+    group.add(arm);
+  }
+  if (neighbors.west) {
+    const arm = createRect(armLength, armWidth, COLORS.fairway);
+    arm.position.set(-armLength / 2 - 0.2, 0.01, 0);
+    group.add(arm);
+  }
 
   return group;
 }
@@ -292,41 +229,71 @@ function createTeeBox() {
 function createGreen() {
   const group = new THREE.Group();
 
-  // Green surface
-  const greenGeom = new THREE.CircleGeometry(1.8, 32);
-  greenGeom.rotateX(-Math.PI / 2);
-  const greenMat = new THREE.MeshLambertMaterial({ color: COLORS.green });
-  const green = new THREE.Mesh(greenGeom, greenMat);
-  green.position.y = 0.05;
-  green.receiveShadow = true;
+  // Main green circle
+  const green = createCircle(1.2, COLORS.green);
+  green.position.y = 0.01;
   group.add(green);
 
-  // Flag pole
-  const poleGeom = new THREE.CylinderGeometry(0.03, 0.03, 1.2, 8);
-  const poleMat = new THREE.MeshLambertMaterial({ color: COLORS.flagPole });
+  // Flag pole (thin line)
+  const poleGeom = new THREE.CylinderGeometry(0.02, 0.02, 1, 8);
+  const poleMat = new THREE.MeshBasicMaterial({ color: COLORS.flagPole });
   const pole = new THREE.Mesh(poleGeom, poleMat);
-  pole.position.set(0, 0.6, 0);
-  pole.castShadow = true;
+  pole.position.y = 0.5;
   group.add(pole);
 
-  // Flag
-  const flagGeom = new THREE.PlaneGeometry(0.4, 0.25);
-  const flagMat = new THREE.MeshLambertMaterial({
-    color: COLORS.flag,
-    side: THREE.DoubleSide
-  });
+  // Flag (small triangle)
+  const flagShape = new THREE.Shape();
+  flagShape.moveTo(0, 0);
+  flagShape.lineTo(0.3, 0.1);
+  flagShape.lineTo(0, 0.2);
+  flagShape.closePath();
+
+  const flagGeom = new THREE.ShapeGeometry(flagShape);
+  const flagMat = new THREE.MeshBasicMaterial({ color: COLORS.flag, side: THREE.DoubleSide });
   const flag = new THREE.Mesh(flagGeom, flagMat);
-  flag.position.set(0.2, 1.05, 0);
-  flag.castShadow = true;
+  flag.position.set(0, 0.85, 0);
+  flag.rotation.y = -Math.PI / 2;
   group.add(flag);
 
-  // Hole
-  const holeGeom = new THREE.CircleGeometry(0.08, 16);
-  holeGeom.rotateX(-Math.PI / 2);
-  const holeMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
-  const hole = new THREE.Mesh(holeGeom, holeMat);
-  hole.position.y = 0.06;
+  // Hole (small dark circle)
+  const hole = createCircle(0.06, 0x333333);
+  hole.position.y = 0.02;
   group.add(hole);
+
+  return group;
+}
+
+function createPath(neighbors) {
+  const group = new THREE.Group();
+
+  // Base circle
+  const base = createCircle(0.25, COLORS.cartPath);
+  base.position.y = 0.01;
+  group.add(base);
+
+  const armLength = 0.35;
+  const armWidth = 0.35;
+
+  if (neighbors.north) {
+    const arm = createRect(armWidth, armLength, COLORS.cartPath);
+    arm.position.set(0, 0.01, -armLength / 2 - 0.1);
+    group.add(arm);
+  }
+  if (neighbors.south) {
+    const arm = createRect(armWidth, armLength, COLORS.cartPath);
+    arm.position.set(0, 0.01, armLength / 2 + 0.1);
+    group.add(arm);
+  }
+  if (neighbors.east) {
+    const arm = createRect(armLength, armWidth, COLORS.cartPath);
+    arm.position.set(armLength / 2 + 0.1, 0.01, 0);
+    group.add(arm);
+  }
+  if (neighbors.west) {
+    const arm = createRect(armLength, armWidth, COLORS.cartPath);
+    arm.position.set(-armLength / 2 - 0.1, 0.01, 0);
+    group.add(arm);
+  }
 
   return group;
 }
@@ -334,22 +301,10 @@ function createGreen() {
 function createBunker() {
   const group = new THREE.Group();
 
-  // Depression
-  const bunkerGeom = new THREE.CircleGeometry(1.2, 24);
-  bunkerGeom.rotateX(-Math.PI / 2);
-  const bunkerMat = new THREE.MeshLambertMaterial({ color: COLORS.bunker });
-  const bunker = new THREE.Mesh(bunkerGeom, bunkerMat);
-  bunker.position.y = -0.1;
-  bunker.receiveShadow = true;
+  // Simple golden circle
+  const bunker = createCircle(0.8, COLORS.bunker);
+  bunker.position.y = 0.01;
   group.add(bunker);
-
-  // Rim
-  const rimGeom = new THREE.RingGeometry(1.1, 1.3, 24);
-  rimGeom.rotateX(-Math.PI / 2);
-  const rimMat = new THREE.MeshLambertMaterial({ color: COLORS.rough });
-  const rim = new THREE.Mesh(rimGeom, rimMat);
-  rim.position.y = 0.02;
-  group.add(rim);
 
   return group;
 }
@@ -357,24 +312,15 @@ function createBunker() {
 function createPond() {
   const group = new THREE.Group();
 
-  const pondGeom = new THREE.CircleGeometry(1.5, 32);
-  pondGeom.rotateX(-Math.PI / 2);
-  const pondMat = new THREE.MeshLambertMaterial({
-    color: COLORS.water,
-    transparent: true,
-    opacity: 0.9
-  });
-  const pond = new THREE.Mesh(pondGeom, pondMat);
-  pond.position.y = -0.1;
-  group.add(pond);
+  // Blue circle with darker edge ring
+  const water = createCircle(1, COLORS.water);
+  water.position.y = 0.01;
+  group.add(water);
 
-  // Edge grass
-  const edgeGeom = new THREE.RingGeometry(1.4, 1.6, 32);
-  edgeGeom.rotateX(-Math.PI / 2);
-  const edgeMat = new THREE.MeshLambertMaterial({ color: COLORS.rough });
-  const edge = new THREE.Mesh(edgeGeom, edgeMat);
-  edge.position.y = 0.01;
-  group.add(edge);
+  // Inner highlight
+  const highlight = createCircle(0.7, 0x85c1e9);
+  highlight.position.y = 0.015;
+  group.add(highlight);
 
   return group;
 }
@@ -382,25 +328,15 @@ function createPond() {
 function createTree() {
   const group = new THREE.Group();
 
-  // Trunk
-  const trunkGeom = new THREE.CylinderGeometry(0.12, 0.15, 0.6, 8);
-  const trunkMat = new THREE.MeshLambertMaterial({ color: COLORS.treeTrunk });
-  const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-  trunk.position.y = 0.3;
-  trunk.castShadow = true;
+  // Simple circle for tree canopy
+  const canopy = createCircle(0.5, COLORS.treeFoliage);
+  canopy.position.y = 0.01;
+  group.add(canopy);
+
+  // Small center dot for trunk indication
+  const trunk = createCircle(0.1, 0x1e8449);
+  trunk.position.y = 0.015;
   group.add(trunk);
-
-  // Foliage
-  const foliageGeom = new THREE.ConeGeometry(0.6, 1.5, 8);
-  const foliageMat = new THREE.MeshLambertMaterial({ color: COLORS.treeFoliage });
-  const foliage = new THREE.Mesh(foliageGeom, foliageMat);
-  foliage.position.y = 1.3;
-  foliage.castShadow = true;
-  group.add(foliage);
-
-  // Random scale variation
-  const scale = 0.8 + Math.random() * 0.4;
-  group.scale.setScalar(scale);
 
   return group;
 }
@@ -408,17 +344,20 @@ function createTree() {
 function createTreeCluster() {
   const group = new THREE.Group();
 
-  const numTrees = 3 + Math.floor(Math.random() * 3);
+  // Overlapping circles for cluster effect
+  const positions = [
+    { x: 0, z: 0, size: 0.6 },
+    { x: 0.4, z: 0.3, size: 0.45 },
+    { x: -0.35, z: 0.25, size: 0.4 },
+    { x: 0.2, z: -0.35, size: 0.5 }
+  ];
 
-  for (let i = 0; i < numTrees; i++) {
-    const tree = createTree();
-    const angle = (i / numTrees) * Math.PI * 2 + Math.random() * 0.5;
-    const radius = 0.4 + Math.random() * 0.8;
-    tree.position.x = Math.cos(angle) * radius;
-    tree.position.z = Math.sin(angle) * radius;
-    tree.scale.setScalar(0.6 + Math.random() * 0.4);
+  positions.forEach((pos, i) => {
+    const shade = i % 2 === 0 ? COLORS.treeFoliage : 0x229954;
+    const tree = createCircle(pos.size, shade);
+    tree.position.set(pos.x, 0.01 + i * 0.002, pos.z);
     group.add(tree);
-  }
+  });
 
   return group;
 }
@@ -426,35 +365,26 @@ function createTreeCluster() {
 function createFlowers() {
   const group = new THREE.Group();
 
-  const flowerColors = [0xff69b4, 0xffff00, 0xff6347, 0xffffff, 0x9370db];
-  const numFlowers = 6 + Math.floor(Math.random() * 4);
+  // Cluster of small colored dots
+  const colors = [0xe74c3c, 0xf39c12, 0x9b59b6, 0xe74c3c, 0xf1c40f];
+  const positions = [
+    { x: 0, z: 0 },
+    { x: 0.15, z: 0.1 },
+    { x: -0.12, z: 0.12 },
+    { x: 0.1, z: -0.15 },
+    { x: -0.15, z: -0.08 }
+  ];
 
-  for (let i = 0; i < numFlowers; i++) {
-    // Stem
-    const stemGeom = new THREE.CylinderGeometry(0.015, 0.015, 0.15, 4);
-    const stemMat = new THREE.MeshLambertMaterial({ color: 0x228b22 });
-    const stem = new THREE.Mesh(stemGeom, stemMat);
+  positions.forEach((pos, i) => {
+    const flower = createCircle(0.08, colors[i]);
+    flower.position.set(pos.x, 0.015, pos.z);
+    group.add(flower);
+  });
 
-    // Flower head
-    const flowerGeom = new THREE.SphereGeometry(0.06, 8, 8);
-    const flowerMat = new THREE.MeshLambertMaterial({
-      color: flowerColors[Math.floor(Math.random() * flowerColors.length)]
-    });
-    const flower = new THREE.Mesh(flowerGeom, flowerMat);
-    flower.position.y = 0.1;
-
-    const flowerGroup = new THREE.Group();
-    flowerGroup.add(stem);
-    flowerGroup.add(flower);
-
-    const angle = Math.random() * Math.PI * 2;
-    const radius = Math.random() * 0.5;
-    flowerGroup.position.x = Math.cos(angle) * radius;
-    flowerGroup.position.z = Math.sin(angle) * radius;
-    flowerGroup.position.y = 0.08;
-
-    group.add(flowerGroup);
-  }
+  // Green base
+  const base = createCircle(0.3, 0x27ae60);
+  base.position.y = 0.01;
+  group.add(base);
 
   return group;
 }
@@ -462,18 +392,15 @@ function createFlowers() {
 function createBoulder() {
   const group = new THREE.Group();
 
-  const boulderGeom = new THREE.DodecahedronGeometry(0.4, 0);
-  const boulderMat = new THREE.MeshLambertMaterial({ color: COLORS.rock });
-  const boulder = new THREE.Mesh(boulderGeom, boulderMat);
-  boulder.position.y = 0.25;
-  boulder.rotation.x = Math.random() * Math.PI;
-  boulder.rotation.y = Math.random() * Math.PI;
-  boulder.castShadow = true;
-  group.add(boulder);
+  // Simple gray circle
+  const rock = createCircle(0.35, COLORS.rock);
+  rock.position.y = 0.01;
+  group.add(rock);
 
-  // Random scale
-  const scale = 0.8 + Math.random() * 0.5;
-  group.scale.setScalar(scale);
+  // Lighter highlight
+  const highlight = createCircle(0.15, 0xbdc3c7);
+  highlight.position.set(-0.08, 0.015, -0.05);
+  group.add(highlight);
 
   return group;
 }
@@ -481,41 +408,28 @@ function createBoulder() {
 function createClubhouse() {
   const group = new THREE.Group();
 
-  // Main building
-  const mainGeom = new THREE.BoxGeometry(3, 1.5, 2.5);
-  const mainMat = new THREE.MeshLambertMaterial({ color: COLORS.clubhouseWalls });
-  const main = new THREE.Mesh(mainGeom, mainMat);
-  main.position.y = 0.75;
-  main.castShadow = true;
-  main.receiveShadow = true;
-  group.add(main);
+  // Main building rectangle
+  const building = createRoundedRect(2, 1.5, 0.2, COLORS.clubhouseWalls);
+  building.position.y = 0.01;
+  group.add(building);
 
-  // Roof
-  const roofGeom = new THREE.ConeGeometry(2.2, 1.2, 4);
-  const roofMat = new THREE.MeshLambertMaterial({ color: COLORS.clubhouseRoof });
-  const roof = new THREE.Mesh(roofGeom, roofMat);
-  roof.position.y = 2.1;
-  roof.rotation.y = Math.PI / 4;
-  roof.castShadow = true;
+  // Roof accent stripe
+  const roof = createRect(2, 0.3, COLORS.clubhouseRoof);
+  roof.position.set(0, 0.015, -0.4);
   group.add(roof);
 
   // Door
-  const doorGeom = new THREE.BoxGeometry(0.6, 1.2, 0.1);
-  const doorMat = new THREE.MeshLambertMaterial({ color: 0x4a3728 });
-  const door = new THREE.Mesh(doorGeom, doorMat);
-  door.position.set(0, 0.6, 1.3);
+  const door = createRect(0.3, 0.4, COLORS.wood);
+  door.position.set(0, 0.02, 0.4);
   group.add(door);
 
   // Windows
-  const windowGeom = new THREE.BoxGeometry(0.4, 0.4, 0.1);
-  const windowMat = new THREE.MeshLambertMaterial({ color: 0x87ceeb });
-
-  const window1 = new THREE.Mesh(windowGeom, windowMat);
-  window1.position.set(-0.9, 0.9, 1.3);
+  const window1 = createRect(0.25, 0.25, 0x5dade2);
+  window1.position.set(-0.5, 0.02, 0);
   group.add(window1);
 
-  const window2 = new THREE.Mesh(windowGeom, windowMat);
-  window2.position.set(0.9, 0.9, 1.3);
+  const window2 = createRect(0.25, 0.25, 0x5dade2);
+  window2.position.set(0.5, 0.02, 0);
   group.add(window2);
 
   return group;
@@ -524,42 +438,18 @@ function createClubhouse() {
 function createBridge() {
   const group = new THREE.Group();
 
-  // Deck
-  const deckGeom = new THREE.BoxGeometry(2.5, 0.15, 1);
-  const deckMat = new THREE.MeshLambertMaterial({ color: COLORS.treeTrunk });
-  const deck = new THREE.Mesh(deckGeom, deckMat);
-  deck.position.y = 0.4;
-  deck.castShadow = true;
-  deck.receiveShadow = true;
+  // Bridge deck
+  const deck = createRoundedRect(1.8, 0.8, 0.1, COLORS.wood);
+  deck.position.y = 0.01;
   group.add(deck);
 
-  // Posts
-  const postGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8);
-  const postMat = new THREE.MeshLambertMaterial({ color: COLORS.treeTrunk });
-
-  const positions = [
-    [-1, 0.1, 0.4],
-    [-1, 0.1, -0.4],
-    [1, 0.1, 0.4],
-    [1, 0.1, -0.4]
-  ];
-
-  positions.forEach(pos => {
-    const post = new THREE.Mesh(postGeom, postMat);
-    post.position.set(...pos);
-    post.castShadow = true;
-    group.add(post);
-  });
-
-  // Railings
-  const railGeom = new THREE.BoxGeometry(2.5, 0.08, 0.08);
-
-  const rail1 = new THREE.Mesh(railGeom, deckMat);
-  rail1.position.set(0, 0.7, 0.45);
+  // Rail lines
+  const rail1 = createRect(1.8, 0.08, 0xa04000);
+  rail1.position.set(0, 0.015, 0.3);
   group.add(rail1);
 
-  const rail2 = new THREE.Mesh(railGeom, deckMat);
-  rail2.position.set(0, 0.7, -0.45);
+  const rail2 = createRect(1.8, 0.08, 0xa04000);
+  rail2.position.set(0, 0.015, -0.3);
   group.add(rail2);
 
   return group;
@@ -568,51 +458,31 @@ function createBridge() {
 function createBench() {
   const group = new THREE.Group();
 
-  const woodMat = new THREE.MeshLambertMaterial({ color: COLORS.treeTrunk });
-
   // Seat
-  const seatGeom = new THREE.BoxGeometry(0.9, 0.06, 0.3);
-  const seat = new THREE.Mesh(seatGeom, woodMat);
-  seat.position.y = 0.35;
-  seat.castShadow = true;
+  const seat = createRoundedRect(0.8, 0.3, 0.05, COLORS.wood);
+  seat.position.y = 0.01;
   group.add(seat);
 
   // Back
-  const backGeom = new THREE.BoxGeometry(0.9, 0.4, 0.06);
-  const back = new THREE.Mesh(backGeom, woodMat);
-  back.position.set(0, 0.55, -0.12);
-  back.castShadow = true;
+  const back = createRect(0.8, 0.1, 0xa04000);
+  back.position.set(0, 0.015, -0.15);
   group.add(back);
-
-  // Legs
-  const legGeom = new THREE.BoxGeometry(0.06, 0.35, 0.28);
-
-  const leg1 = new THREE.Mesh(legGeom, woodMat);
-  leg1.position.set(-0.35, 0.18, 0);
-  group.add(leg1);
-
-  const leg2 = new THREE.Mesh(legGeom, woodMat);
-  leg2.position.set(0.35, 0.18, 0);
-  group.add(leg2);
 
   return group;
 }
 
-// Create a preview version (semi-transparent)
 export function createPreviewElement(type) {
   const element = createElement(type, new THREE.Vector3(0, 0, 0));
   if (!element) return null;
 
-  // Make all meshes semi-transparent
   element.traverse((child) => {
     if (child.isMesh) {
       child.material = child.material.clone();
       child.material.transparent = true;
-      child.material.opacity = 0.5;
+      child.material.opacity = 0.6;
     }
   });
 
   element.userData.isPreview = true;
-
   return element;
 }

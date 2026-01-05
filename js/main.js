@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createTerrain, updateWater } from './terrain.js';
+import { createTerrain } from './terrain.js';
 import { createElement, ELEMENT_TYPES, findNeighbors, updateConnectedNeighbors } from './elements.js';
 import { PlacementSystem } from './placement.js';
 import { ScoringSystem } from './scoring.js';
@@ -27,70 +26,43 @@ const UNLOCK_THRESHOLDS = [
 // Three.js setup
 const canvas = document.getElementById('canvas');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb); // Sky blue
+scene.background = new THREE.Color(0xf5f0e6); // Warm off-white like Mini Metro
 
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
+// Orthographic camera for clean top-down view
+const frustumSize = 20;
+const aspect = window.innerWidth / window.innerHeight;
+const camera = new THREE.OrthographicCamera(
+  frustumSize * aspect / -2,
+  frustumSize * aspect / 2,
+  frustumSize / 2,
+  frustumSize / -2,
   0.1,
   1000
 );
-camera.position.set(20, 15, 20);
+camera.position.set(0, 50, 0);
+camera.lookAt(0, 0, 0);
+
+// Current zoom level
+let currentZoom = 1;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2;
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
-  preserveDrawingBuffer: true // For screenshots
+  preserveDrawingBuffer: true
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+// Simple flat lighting - no shadows needed for minimalist style
+const ambientLight = new THREE.AmbientLight(0xffffff, 1);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(10, 20, 10);
-directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048;
-directionalLight.shadow.mapSize.height = 2048;
-directionalLight.shadow.camera.near = 0.5;
-directionalLight.shadow.camera.far = 50;
-directionalLight.shadow.camera.left = -20;
-directionalLight.shadow.camera.right = 20;
-directionalLight.shadow.camera.top = 20;
-directionalLight.shadow.camera.bottom = -20;
-scene.add(directionalLight);
-
-const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x7ec850, 0.3);
-scene.add(hemisphereLight);
-
-// Controls - disable left-click rotation (use Q/E instead)
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.minDistance = 10;
-controls.maxDistance = 50;
-controls.maxPolarAngle = Math.PI / 2.2;
-controls.target.set(0, 0, 0);
-// Disable left mouse button for rotation - we use it for placing
-controls.mouseButtons = {
-  LEFT: null,
-  MIDDLE: THREE.MOUSE.DOLLY,
-  RIGHT: THREE.MOUSE.PAN
-};
-
-// Camera rotation speed
-const ROTATION_SPEED = 0.03;
-
 // Create terrain
-let terrain, water;
+let terrain;
 try {
-  const result = createTerrain(scene);
-  terrain = result.terrain;
-  water = result.water;
+  terrain = createTerrain(scene);
   console.log('Terrain created successfully');
 } catch (err) {
   console.error('Failed to create terrain:', err);
@@ -107,7 +79,6 @@ if (savedData) {
   state.score = savedData.score || 0;
   state.unlockedPacks = savedData.unlockedPacks || [1];
 
-  // Restore placements
   if (savedData.placements) {
     savedData.placements.forEach(p => {
       const element = createElement(p.type, new THREE.Vector3(p.x, p.y, p.z));
@@ -166,7 +137,6 @@ document.querySelectorAll('.element-btn').forEach(btn => {
       return;
     }
 
-    // Deselect if already selected
     if (btn.classList.contains('selected')) {
       btn.classList.remove('selected');
       state.selectedElement = null;
@@ -174,7 +144,6 @@ document.querySelectorAll('.element-btn').forEach(btn => {
       return;
     }
 
-    // Select new element
     document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     state.selectedElement = btn.dataset.element;
@@ -191,23 +160,19 @@ document.getElementById('btn-sound').addEventListener('click', () => {
 });
 
 document.getElementById('btn-screenshot').addEventListener('click', () => {
-  // Hide UI
   document.querySelectorAll('.ui-panel, .element-tray, .instructions').forEach(el => {
     el.style.display = 'none';
   });
   document.getElementById('watermark').classList.remove('hidden');
 
-  // Render and capture
   renderer.render(scene, camera);
   const dataURL = renderer.domElement.toDataURL('image/png');
 
-  // Download
   const link = document.createElement('a');
   link.download = 'links-course.png';
   link.href = dataURL;
   link.click();
 
-  // Show UI again
   document.querySelectorAll('.ui-panel, .element-tray, .instructions').forEach(el => {
     el.style.display = '';
   });
@@ -239,10 +204,10 @@ document.addEventListener('contextmenu', (e) => {
   }
 });
 
-// Track keys for smooth rotation
+// Track keys for rotation
 const keysPressed = { q: false, e: false };
+let cameraAngle = 0;
 
-// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
 
@@ -252,7 +217,6 @@ document.addEventListener('keydown', (e) => {
     placement.clearPreview();
   }
 
-  // Q/E for camera rotation
   if (key === 'q') keysPressed.q = true;
   if (key === 'e') keysPressed.e = true;
 });
@@ -263,23 +227,64 @@ document.addEventListener('keyup', (e) => {
   if (key === 'e') keysPressed.e = false;
 });
 
-// Rotate camera around target
-function rotateCamera(angle) {
-  const offset = new THREE.Vector3();
-  offset.copy(camera.position).sub(controls.target);
-
-  const spherical = new THREE.Spherical();
-  spherical.setFromVector3(offset);
-  spherical.theta += angle;
-
-  offset.setFromSpherical(spherical);
-  camera.position.copy(controls.target).add(offset);
-  camera.lookAt(controls.target);
+// Update camera for orthographic rotation
+function updateCamera() {
+  const radius = 50;
+  camera.position.x = Math.sin(cameraAngle) * radius * 0.3;
+  camera.position.z = Math.cos(cameraAngle) * radius * 0.3;
+  camera.position.y = radius;
+  camera.lookAt(0, 0, 0);
 }
+
+// Zoom with scroll
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const zoomSpeed = 0.1;
+  currentZoom += e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+  currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom));
+
+  const newSize = frustumSize / currentZoom;
+  camera.left = newSize * aspect / -2;
+  camera.right = newSize * aspect / 2;
+  camera.top = newSize / 2;
+  camera.bottom = newSize / -2;
+  camera.updateProjectionMatrix();
+}, { passive: false });
+
+// Pan with right mouse drag
+let isPanning = false;
+let panStart = new THREE.Vector2();
+let targetOffset = new THREE.Vector3();
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button === 2) {
+    isPanning = true;
+    panStart.set(e.clientX, e.clientY);
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (isPanning) {
+    const deltaX = (e.clientX - panStart.x) * 0.05 / currentZoom;
+    const deltaY = (e.clientY - panStart.y) * 0.05 / currentZoom;
+
+    targetOffset.x -= deltaX;
+    targetOffset.z -= deltaY;
+
+    // Clamp panning
+    targetOffset.x = Math.max(-10, Math.min(10, targetOffset.x));
+    targetOffset.z = Math.max(-10, Math.min(10, targetOffset.z));
+
+    panStart.set(e.clientX, e.clientY);
+  }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (e.button === 2) isPanning = false;
+});
 
 // Handle placement
 placement.onPlace = (elementType, position) => {
-  // Find neighbors for connectable types
   const neighbors = findNeighbors(position.x, position.z, state.placements, elementType);
   const element = createElement(elementType, position, neighbors);
 
@@ -292,10 +297,8 @@ placement.onPlace = (elementType, position) => {
     };
     state.placements.push(newPlacement);
 
-    // Update connected neighbors (this updates visuals for adjacent tiles)
     updateConnectedNeighbors(scene, state.placements, newPlacement);
 
-    // Recalculate score
     const newScore = scoring.calculateScore(state.placements);
     const pointsGained = newScore - state.score;
     state.score = newScore;
@@ -317,7 +320,6 @@ placement.onRemove = (placementIndex) => {
   scene.remove(removed.mesh);
   state.placements.splice(placementIndex, 1);
 
-  // Recalculate score
   state.score = scoring.calculateScore(state.placements);
 
   updateUI(state, UNLOCK_THRESHOLDS);
@@ -327,7 +329,12 @@ placement.onRemove = (placementIndex) => {
 
 // Resize handler
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const newAspect = window.innerWidth / window.innerHeight;
+  const size = frustumSize / currentZoom;
+  camera.left = size * newAspect / -2;
+  camera.right = size * newAspect / 2;
+  camera.top = size / 2;
+  camera.bottom = size / -2;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
@@ -336,26 +343,21 @@ window.addEventListener('resize', () => {
 updateUI(state, UNLOCK_THRESHOLDS);
 
 // Animation loop
-const clock = new THREE.Clock();
+const ROTATION_SPEED = 0.02;
 
 function animate() {
   requestAnimationFrame(animate);
 
-  const time = clock.getElapsedTime();
-
   // Handle Q/E camera rotation
-  if (keysPressed.q) rotateCamera(ROTATION_SPEED);
-  if (keysPressed.e) rotateCamera(-ROTATION_SPEED);
+  if (keysPressed.q) cameraAngle -= ROTATION_SPEED;
+  if (keysPressed.e) cameraAngle += ROTATION_SPEED;
 
-  // Update water animation
-  if (water) {
-    updateWater(water, time);
-  }
+  // Apply pan offset
+  camera.position.x = Math.sin(cameraAngle) * 15 + targetOffset.x;
+  camera.position.z = Math.cos(cameraAngle) * 15 + targetOffset.z;
+  camera.position.y = 50;
+  camera.lookAt(targetOffset.x, 0, targetOffset.z);
 
-  // Update controls
-  controls.update();
-
-  // Render
   renderer.render(scene, camera);
 }
 
