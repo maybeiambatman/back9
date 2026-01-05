@@ -1,19 +1,36 @@
-# Godot 4+ specific ignores
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+dist-ssr/
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Godot 4+ specific ignores (legacy)
 .godot/
-
-# Godot-specific ignores
 *.translation
-
-# Imported textures and samples
 .import/
-
-# Exported builds
 export/
 exports/
 build/
 builds/
-
-# Mono-specific ignores
 .mono/
 data_*/
 mono_crash.*.json
