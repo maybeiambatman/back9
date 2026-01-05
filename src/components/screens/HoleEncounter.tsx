@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { CardHand } from '../cards/CardHand';
+import { DeckViewer } from '../cards/DeckViewer';
 import { HoleDisplay } from '../hole/HoleDisplay';
 import { ConfidenceBar } from '../ui/ConfidenceBar';
 import { StatusEffects } from '../ui/StatusEffects';
@@ -20,9 +21,11 @@ export function HoleEncounter() {
   const drawPile = useRunStore(state => state.drawPile);
   const discardPile = useRunStore(state => state.discardPile);
   const trinkets = useRunStore(state => state.trinkets);
+  const deck = useRunStore(state => state.deck);
 
   const [shotResult, setShotResult] = useState<ShotResult | null>(null);
   const [isResolving, setIsResolving] = useState(false);
+  const [showDeckViewer, setShowDeckViewer] = useState(false);
 
   if (!currentHole) return null;
 
@@ -144,9 +147,12 @@ export function HoleEncounter() {
         <div className="flex justify-between items-center mb-4 px-4">
           <div className="flex items-center gap-4 flex-wrap">
             <ConfidenceBar current={confidence} max={maxConfidence} />
-            <div className="text-white text-sm">
-              Draw: {drawPile.length} | Discard: {discardPile.length}
-            </div>
+            <button
+              onClick={() => setShowDeckViewer(true)}
+              className="text-white text-sm hover:text-yellow-300 transition-colors"
+            >
+              Deck: {deck.length} | Draw: {drawPile.length} | Discard: {discardPile.length}
+            </button>
           </div>
 
           <Button
@@ -171,6 +177,12 @@ export function HoleEncounter() {
           />
         )}
       </AnimatePresence>
+
+      {/* Deck viewer modal */}
+      <DeckViewer
+        isOpen={showDeckViewer}
+        onClose={() => setShowDeckViewer(false)}
+      />
     </div>
   );
 }
