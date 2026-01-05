@@ -70,6 +70,8 @@ export const baseStarterDeck: string[] = [
   'stock_iron',
   'bump_run',
   'lag_putt',
+  'lag_putt',
+  'lag_putt',
   'aggressive_putt',
   'check_wind',
   'deep_breath',
