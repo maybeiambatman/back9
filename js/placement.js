@@ -16,6 +16,10 @@ export class PlacementSystem {
     this.preview = null;
     this.previewType = null;
 
+    // Drag building state
+    this.isDragging = false;
+    this.lastPlacedPosition = null;
+
     this.onPlace = null;
     this.onRemove = null;
 
@@ -26,7 +30,8 @@ export class PlacementSystem {
     const canvas = document.getElementById('canvas');
 
     canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-    canvas.addEventListener('click', (e) => this.handleClick(e));
+    canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+    canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
   }
 
   handleMouseMove(event) {
@@ -69,13 +74,25 @@ export class PlacementSystem {
       const validity = this.checkValidity(snappedX, snappedZ);
       this.updatePreviewColor(validity.valid);
       this.showPointPreview(event.clientX, event.clientY, validity.points, validity.valid);
+
+      // If dragging, try to place
+      if (this.isDragging && validity.valid) {
+        const posKey = `${snappedX},${snappedZ}`;
+        if (this.lastPlacedPosition !== posKey) {
+          this.placeElement(snappedX, snappedZ, height);
+          this.lastPlacedPosition = posKey;
+        }
+      }
     } else if (this.preview) {
       this.preview.visible = false;
       this.hidePointPreview();
     }
   }
 
-  handleClick(event) {
+  handleMouseDown(event) {
+    // Only left click
+    if (event.button !== 0) return;
+
     // Check if clicking on UI
     if (event.target.closest('.ui-panel, .element-tray, .icon-btn, .element-btn')) {
       return;
@@ -101,34 +118,44 @@ export class PlacementSystem {
       return;
     }
 
-    // Otherwise, try to place new element
-    if (!this.state.selectedElement) return;
+    // Start drag building if element is selected
+    if (this.state.selectedElement) {
+      this.isDragging = true;
+      this.lastPlacedPosition = null;
 
-    const terrainIntersects = this.raycaster.intersectObject(this.terrain);
-    if (terrainIntersects.length === 0) return;
+      // Try to place at current position
+      const terrainIntersects = this.raycaster.intersectObject(this.terrain);
+      if (terrainIntersects.length > 0) {
+        const point = terrainIntersects[0].point;
+        const snappedX = Math.round(point.x * 2) / 2;
+        const snappedZ = Math.round(point.z * 2) / 2;
+        const height = getTerrainHeight(this.terrain, snappedX, snappedZ);
 
-    const point = terrainIntersects[0].point;
-    const snappedX = Math.round(point.x * 2) / 2;
-    const snappedZ = Math.round(point.z * 2) / 2;
-    const height = getTerrainHeight(this.terrain, snappedX, snappedZ);
-
-    const validity = this.checkValidity(snappedX, snappedZ);
-    if (!validity.valid) {
-      this.audio.playError();
-      return;
+        const validity = this.checkValidity(snappedX, snappedZ);
+        if (validity.valid) {
+          this.placeElement(snappedX, snappedZ, height);
+          this.lastPlacedPosition = `${snappedX},${snappedZ}`;
+        } else {
+          this.audio.playError();
+        }
+      }
     }
+  }
 
-    const position = new THREE.Vector3(snappedX, height, snappedZ);
+  handleMouseUp(event) {
+    if (event.button === 0) {
+      this.isDragging = false;
+      this.lastPlacedPosition = null;
+    }
+  }
+
+  placeElement(x, z, height) {
+    const position = new THREE.Vector3(x, height, z);
 
     if (this.onPlace) {
       this.onPlace(this.state.selectedElement, position);
     }
-
-    // Clear selection after placing
-    document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('selected'));
-    this.state.selectedElement = null;
-    this.clearPreview();
-    this.hidePointPreview();
+    // Note: Selection stays active - no clearing here!
   }
 
   checkValidity(x, z) {
@@ -153,6 +180,12 @@ export class PlacementSystem {
           valid = false;
           break;
         }
+      }
+
+      // Prevent exact overlap
+      if (dist < 0.1) {
+        valid = false;
+        break;
       }
     }
 
@@ -182,7 +215,8 @@ export class PlacementSystem {
       case 'tee':
         return 1.5;
       case 'fairway':
-        return 0.5;
+      case 'cartpath':
+        return 0.3; // Allow closer placement for continuous paths
       case 'bunker':
       case 'pond':
         return 1.0;
@@ -207,7 +241,8 @@ export class PlacementSystem {
       ['fairway', 'tee'],
       ['fairway', 'green'],
       ['flowers', 'flowers'],
-      ['tree', 'tree']
+      ['tree', 'tree'],
+      ['fairway', 'cartpath']
     ];
 
     return adjacentPairs.some(pair =>

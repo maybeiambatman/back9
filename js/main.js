@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTerrain, updateWater } from './terrain.js';
-import { createElement, ELEMENT_TYPES } from './elements.js';
+import { createElement, ELEMENT_TYPES, findNeighbors, updateConnectedNeighbors } from './elements.js';
 import { PlacementSystem } from './placement.js';
 import { ScoringSystem } from './scoring.js';
 import { AudioSystem } from './audio.js';
@@ -67,7 +67,7 @@ scene.add(directionalLight);
 const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x7ec850, 0.3);
 scene.add(hemisphereLight);
 
-// Controls
+// Controls - disable left-click rotation (use Q/E instead)
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
@@ -75,6 +75,15 @@ controls.minDistance = 10;
 controls.maxDistance = 50;
 controls.maxPolarAngle = Math.PI / 2.2;
 controls.target.set(0, 0, 0);
+// Disable left mouse button for rotation - we use it for placing
+controls.mouseButtons = {
+  LEFT: null,
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.PAN
+};
+
+// Camera rotation speed
+const ROTATION_SPEED = 0.03;
 
 // Create terrain
 let terrain, water;
@@ -230,25 +239,61 @@ document.addEventListener('contextmenu', (e) => {
   }
 });
 
+// Track keys for smooth rotation
+const keysPressed = { q: false, e: false };
+
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+  const key = e.key.toLowerCase();
+
+  if (key === 'escape') {
     document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('selected'));
     state.selectedElement = null;
     placement.clearPreview();
   }
+
+  // Q/E for camera rotation
+  if (key === 'q') keysPressed.q = true;
+  if (key === 'e') keysPressed.e = true;
 });
+
+document.addEventListener('keyup', (e) => {
+  const key = e.key.toLowerCase();
+  if (key === 'q') keysPressed.q = false;
+  if (key === 'e') keysPressed.e = false;
+});
+
+// Rotate camera around target
+function rotateCamera(angle) {
+  const offset = new THREE.Vector3();
+  offset.copy(camera.position).sub(controls.target);
+
+  const spherical = new THREE.Spherical();
+  spherical.setFromVector3(offset);
+  spherical.theta += angle;
+
+  offset.setFromSpherical(spherical);
+  camera.position.copy(controls.target).add(offset);
+  camera.lookAt(controls.target);
+}
 
 // Handle placement
 placement.onPlace = (elementType, position) => {
-  const element = createElement(elementType, position);
+  // Find neighbors for connectable types
+  const neighbors = findNeighbors(position.x, position.z, state.placements, elementType);
+  const element = createElement(elementType, position, neighbors);
+
   if (element) {
     scene.add(element);
-    state.placements.push({
+    const newPlacement = {
       type: elementType,
       mesh: element,
       position: position.clone()
-    });
+    };
+    state.placements.push(newPlacement);
+
+    // Update connected neighbors (this updates visuals for adjacent tiles)
+    updateConnectedNeighbors(scene, state.placements, newPlacement);
 
     // Recalculate score
     const newScore = scoring.calculateScore(state.placements);
@@ -297,6 +342,10 @@ function animate() {
   requestAnimationFrame(animate);
 
   const time = clock.getElapsedTime();
+
+  // Handle Q/E camera rotation
+  if (keysPressed.q) rotateCamera(ROTATION_SPEED);
+  if (keysPressed.e) rotateCamera(-ROTATION_SPEED);
 
   // Update water animation
   if (water) {
