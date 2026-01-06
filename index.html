@@ -296,6 +296,21 @@
       background: #f39c12;
     }
 
+    .audio-controls {
+      display: inline-block;
+      margin-left: 15px;
+    }
+
+    .audio-controls button {
+      padding: 5px 10px;
+      margin: 0 2px;
+      background: #9b59b6;
+    }
+
+    .audio-controls button:hover {
+      background: #8e44ad;
+    }
+
     .tournament-active {
       background: #2a4a2a !important;
       border: 1px solid #4ecca3;
@@ -386,6 +401,10 @@
       <button id="speed-5">5x</button>
       <button id="speed-0">Pause</button>
     </span>
+    <span class="audio-controls">
+      <button id="music-btn" onclick="toggleMusic()">♪ ON</button>
+      <button id="sfx-btn" onclick="toggleSFX()">SFX ON</button>
+    </span>
   </footer>
 
   <div id="modal-overlay">
@@ -442,6 +461,300 @@
       WORK_PAY: 75,
       WORK_ENERGY: 50,
     };
+
+    // ============================================
+    // AUDIO SYSTEM
+    // ============================================
+    let audioCtx = null;
+    let currentMusic = null;
+    let musicEnabled = true;
+    let sfxEnabled = true;
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    // Sound effect generators
+    const SFX = {
+      // Ball hitting cup - hollow thunk
+      putt: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.type = 'triangle';
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      },
+
+      // Chip shot - crisp hit
+      chip: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.type = 'square';
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      },
+
+      // Driver swing - whoosh + crack
+      drive: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        // Whoosh
+        const noise = audioCtx.createOscillator();
+        const noiseGain = audioCtx.createGain();
+        noise.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+        noise.frequency.setValueAtTime(100, audioCtx.currentTime);
+        noise.frequency.linearRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+        noiseGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        noise.type = 'sawtooth';
+        noise.start();
+        noise.stop(audioCtx.currentTime + 0.15);
+        // Crack
+        setTimeout(() => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+          osc.type = 'square';
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.1);
+        }, 100);
+      },
+
+      // Cash register
+      cash: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const notes = [523, 659, 784]; // C5, E5, G5
+        notes.forEach((freq, i) => {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.type = 'square';
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+          }, i * 50);
+        });
+      },
+
+      // Sleep chime
+      sleep: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const notes = [392, 330, 262]; // G4, E4, C4 descending
+        notes.forEach((freq, i) => {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.type = 'sine';
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+          }, i * 150);
+        });
+      },
+
+      // Purchase cha-ching
+      buy: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(1047, audioCtx.currentTime); // C6
+        osc.frequency.setValueAtTime(1319, audioCtx.currentTime + 0.05); // E6
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.type = 'square';
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      },
+
+      // Tournament fanfare
+      tournament: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const notes = [262, 330, 392, 523]; // C4, E4, G4, C5
+        notes.forEach((freq, i) => {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.type = 'square';
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+          }, i * 80);
+        });
+      },
+
+      // Milestone achievement
+      milestone: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+        notes.forEach((freq, i) => {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            osc2.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc2.frequency.setValueAtTime(freq * 1.5, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.type = 'square';
+            osc2.type = 'triangle';
+            osc.start();
+            osc2.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+            osc2.stop(audioCtx.currentTime + 0.3);
+          }, i * 100);
+        });
+      },
+
+      // UI click
+      click: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+        osc.type = 'square';
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.05);
+      },
+
+      // Play round (walking out)
+      playRound: () => {
+        if (!sfxEnabled || !audioCtx) return;
+        const notes = [262, 294, 330, 349]; // C4, D4, E4, F4
+        notes.forEach((freq, i) => {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+            osc.type = 'triangle';
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.12);
+          }, i * 100);
+        });
+      }
+    };
+
+    // Background music - phase-specific melodies
+    const MUSIC = {
+      // Phase 1: Hopeful beginner tune (C major, simple)
+      1: { notes: [262, 294, 330, 294, 262, 330, 392, 330], tempo: 300, type: 'triangle' },
+      // Phase 2: More determined (G major)
+      2: { notes: [392, 440, 494, 440, 392, 494, 587, 494], tempo: 280, type: 'triangle' },
+      // Phase 3: Confident (D major, fuller)
+      3: { notes: [294, 330, 370, 440, 370, 330, 294, 370, 440, 494], tempo: 260, type: 'square' },
+      // Phase 4: Intense pressure (A minor)
+      4: { notes: [440, 494, 523, 494, 440, 392, 440, 523, 587, 523], tempo: 240, type: 'square' },
+      // Phase 5: Triumphant (E major)
+      5: { notes: [330, 415, 494, 622, 494, 415, 330, 415, 494, 622, 740], tempo: 250, type: 'square' },
+      // Phase 6: Epic chase (F# minor)
+      6: { notes: [370, 440, 494, 587, 659, 587, 494, 440, 370, 440, 494, 587], tempo: 230, type: 'sawtooth' },
+      // Phase 7: Legendary (C major triumphant)
+      7: { notes: [523, 587, 659, 784, 880, 784, 659, 784, 880, 1047, 880, 784], tempo: 280, type: 'triangle' }
+    };
+
+    let musicInterval = null;
+    let currentPhaseMusic = 0;
+
+    function playMusic(phase) {
+      if (!musicEnabled || !audioCtx) return;
+      if (currentPhaseMusic === phase && musicInterval) return;
+
+      stopMusic();
+      currentPhaseMusic = phase;
+
+      const music = MUSIC[phase] || MUSIC[1];
+      let noteIndex = 0;
+
+      musicInterval = setInterval(() => {
+        if (!musicEnabled || !audioCtx) {
+          stopMusic();
+          return;
+        }
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.frequency.setValueAtTime(music.notes[noteIndex], audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (music.tempo / 1000) * 0.8);
+
+        osc.type = music.type;
+        osc.start();
+        osc.stop(audioCtx.currentTime + (music.tempo / 1000) * 0.9);
+
+        noteIndex = (noteIndex + 1) % music.notes.length;
+      }, music.tempo);
+    }
+
+    function stopMusic() {
+      if (musicInterval) {
+        clearInterval(musicInterval);
+        musicInterval = null;
+      }
+      currentPhaseMusic = 0;
+    }
+
+    function toggleMusic() {
+      musicEnabled = !musicEnabled;
+      if (musicEnabled) {
+        initAudio();
+        playMusic(state.phase);
+      } else {
+        stopMusic();
+      }
+      document.getElementById('music-btn').textContent = musicEnabled ? '♪ ON' : '♪ OFF';
+    }
+
+    function toggleSFX() {
+      sfxEnabled = !sfxEnabled;
+      document.getElementById('sfx-btn').textContent = sfxEnabled ? 'SFX ON' : 'SFX OFF';
+    }
 
     // ============================================
     // GAME STATE
@@ -824,6 +1137,8 @@
 
       if (state.phase !== oldPhase) {
         document.body.className = `phase-${state.phase}`;
+        SFX.milestone();
+        playMusic(state.phase);
       }
     }
 
@@ -1414,8 +1729,22 @@
       if (state.energy < action.energy) return;
       if (!action.available()) return;
 
+      // Initialize audio on first interaction
+      initAudio();
+      if (!musicInterval) playMusic(state.phase);
+
       state.cash -= cost;
       state.energy -= action.energy;
+
+      // Play appropriate sound effect
+      if (id === 'practicePutting') SFX.putt();
+      else if (id === 'practiceChipping') SFX.chip();
+      else if (id === 'hitRange') SFX.drive();
+      else if (id === 'play9' || id === 'play18') SFX.playRound();
+      else if (id === 'work') SFX.cash();
+      else if (id === 'sleep' || id === 'rest') SFX.sleep();
+      else if (id === 'focusedPractice') SFX.click();
+
       action.effect();
       render();
     }
@@ -1427,6 +1756,9 @@
       if (state.cash < upgrade.cost) return;
       if (!upgrade.req()) return;
 
+      initAudio();
+      SFX.buy();
+
       state.cash -= upgrade.cost;
       state.purchasedUpgrades.push(id);
       upgrade.effect();
@@ -1436,7 +1768,11 @@
 
     window.enterTournament = function(id) {
       const tournament = TOURNAMENTS.find(t => t.id === id);
-      if (tournament) startTournament(tournament);
+      if (tournament) {
+        initAudio();
+        SFX.tournament();
+        startTournament(tournament);
+      }
     };
 
     function openFocusedPracticeModal() {
@@ -1458,6 +1794,7 @@
     }
 
     window.doFocusedPractice = function(skill) {
+      SFX.drive(); // Intensive practice sound
       const gain = 0.3 * getCoachMult();
       const cap = getSkillCap();
       state[skill] = Math.min(cap, state[skill] + gain);
