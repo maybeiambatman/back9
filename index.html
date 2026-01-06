@@ -886,10 +886,14 @@
     }
 
     function simulateCasualRound(holes) {
-      const avgSkill = (state.driving + state.irons + state.shortGame + state.putting) / 4;
+      // Handicap represents strokes over par for 18 holes
+      // So for 9 holes, add half the handicap to par
       const par = holes === 9 ? 36 : 72;
-      const expected = par + (36 - state.handicap) * (holes / 18) * -1;
-      const variance = (Math.random() - 0.5) * 6;
+      const handicapStrokes = state.handicap * (holes / 18);
+      const expected = par + handicapStrokes;
+      // Higher handicap = more variance (inconsistent play)
+      const varianceRange = 3 + (state.handicap / 10);
+      const variance = (Math.random() - 0.5) * varianceRange * 2;
       const score = Math.round(expected + variance);
       return score;
     }
@@ -906,22 +910,54 @@
     }
 
     function simulateTournamentRound(difficulty) {
-      const strength = getPlayerStrength();
-      const expected = 72 - (strength - 50) * 0.16;
-      const diffMod = (difficulty - 50) * 0.05;
-      const variance = (Math.random() - 0.5) * 8;
-      const mentalBonus = state.mental * 0.02;
-      return Math.round(expected + diffMod + variance - mentalBonus);
+      // Tournament score based on handicap (gross score)
+      // Handicap 36 = ~108 for 18 holes, scratch = ~72, +4 = ~68
+      const baseScore = 72 + state.handicap;
+
+      // Equipment and mental bonuses reduce score
+      const equipmentBonus = (state.driverQuality + state.ironsQuality + state.wedgesQuality + state.putterQuality - 4) * 0.5;
+      const mentalBonus = state.mental * 0.05;
+      const caddieBonus = state.hasCaddie ? 1 : 0 + (state.hasEliteCaddie ? 1 : 0);
+
+      // Difficulty adjustment (harder courses = higher scores)
+      const diffMod = (difficulty - 50) * 0.06;
+
+      // Variance (less for better players)
+      const varianceRange = 2 + Math.max(0, state.handicap / 8);
+      const variance = (Math.random() - 0.5) * varianceRange * 2;
+
+      const score = Math.round(baseScore - equipmentBonus - mentalBonus - caddieBonus + diffMod + variance);
+      return score;
     }
 
     function generateFieldScores(field, rounds, difficulty) {
+      // Generate realistic field scores based on tournament difficulty
+      // difficulty 30 = club level (handicaps 15-36)
+      // difficulty 50 = regional (handicaps 5-20)
+      // difficulty 70 = mini tour (handicaps -2 to 5)
+      // difficulty 85+ = PGA Tour (handicaps -4 to 0)
       const scores = [];
+
       for (let i = 0; i < field; i++) {
         let total = 0;
-        const skill = 50 + Math.random() * 40 + (difficulty - 50) * 0.3;
+        // Generate a handicap for this AI player based on difficulty
+        let aiHandicap;
+        if (difficulty <= 35) {
+          aiHandicap = 15 + Math.random() * 20; // 15-35 handicap range
+        } else if (difficulty <= 50) {
+          aiHandicap = 5 + Math.random() * 15; // 5-20 handicap
+        } else if (difficulty <= 70) {
+          aiHandicap = -2 + Math.random() * 10; // -2 to 8 handicap
+        } else if (difficulty <= 85) {
+          aiHandicap = -4 + Math.random() * 6; // -4 to 2 handicap
+        } else {
+          aiHandicap = -6 + Math.random() * 4; // -6 to -2 (tour pros)
+        }
+
         for (let r = 0; r < rounds; r++) {
-          const expected = 72 - (skill - 50) * 0.14;
-          total += Math.round(expected + (Math.random() - 0.5) * 8);
+          const baseScore = 72 + aiHandicap;
+          const variance = (Math.random() - 0.5) * (4 + aiHandicap / 5);
+          total += Math.round(baseScore + variance);
         }
         scores.push(total);
       }
