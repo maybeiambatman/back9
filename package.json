@@ -1,9 +1,0 @@
-{
-  "name": "links-golf-course-builder",
-  "version": "1.0.0",
-  "description": "Zen golf course builder using Three.js",
-  "scripts": {
-    "serve": "python3 -m http.server 8080",
-    "dev": "npx serve ."
-  }
-}

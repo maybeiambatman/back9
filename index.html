@@ -3,155 +3,1529 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Links - Golf Course Builder</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Scratch - Golf Incremental</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a2e;
+      color: #eee;
+      line-height: 1.6;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #4ecca3;
+      text-align: center;
+      font-size: 2.5em;
+      letter-spacing: 0.3em;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      color: #4ecca3;
+      border-bottom: 1px solid #4ecca3;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+
+    #phase-indicator {
+      text-align: center;
+      font-size: 1.2em;
+      margin-bottom: 20px;
+    }
+
+    #time-display {
+      text-align: center;
+      color: #888;
+      margin-bottom: 15px;
+    }
+
+    section {
+      background: #16213e;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #0f3460;
+    }
+
+    .stat-grid, .attr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .stat-value {
+      color: #4ecca3;
+      font-weight: bold;
+    }
+
+    button {
+      background: #4ecca3;
+      color: #1a1a2e;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9em;
+      border-radius: 3px;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #3db892;
+    }
+
+    button:disabled {
+      background: #444;
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    .action-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      margin: 5px 0;
+      padding: 12px 15px;
+    }
+
+    .action-btn .cost {
+      float: right;
+      color: #1a1a2e;
+      opacity: 0.7;
+    }
+
+    .upgrade-item, .tournament-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      margin: 5px 0;
+      background: #0f3460;
+      border-radius: 3px;
+    }
+
+    .upgrade-item.owned {
+      opacity: 0.4;
+      background: #0a2040;
+    }
+
+    .upgrade-item.locked {
+      opacity: 0.5;
+    }
+
+    .upgrade-item.locked button {
+      display: none;
+    }
+
+    .upgrade-info {
+      flex: 1;
+    }
+
+    .upgrade-name {
+      font-weight: bold;
+      color: #4ecca3;
+    }
+
+    .upgrade-desc {
+      font-size: 0.85em;
+      color: #aaa;
+    }
+
+    .upgrade-req {
+      font-size: 0.8em;
+      color: #f39c12;
+    }
+
+    #log-entries {
+      height: 180px;
+      overflow-y: auto;
+      font-size: 0.85em;
+      padding: 10px;
+      background: #0d1b2a;
+      border-radius: 3px;
+    }
+
+    .log-entry {
+      margin: 3px 0;
+      padding: 2px 0;
+      border-bottom: 1px solid #1a1a2e;
+    }
+
+    .log-positive { color: #4ecca3; }
+    .log-negative { color: #e74c3c; }
+    .log-milestone { color: #f1c40f; font-weight: bold; }
+    .log-info { color: #3498db; }
+
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      padding: 15px;
+      background: #16213e;
+      border-radius: 5px;
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    @media (max-width: 700px) {
+      .columns { grid-template-columns: 1fr; }
+    }
+
+    .phase-1 #phase-indicator { color: #95a5a6; }
+    .phase-2 #phase-indicator { color: #3498db; }
+    .phase-3 #phase-indicator { color: #9b59b6; }
+    .phase-4 #phase-indicator { color: #e67e22; }
+    .phase-5 #phase-indicator { color: #f1c40f; }
+    .phase-6 #phase-indicator { color: #e74c3c; }
+    .phase-7 #phase-indicator { color: #4ecca3; }
+
+    .progress-bar {
+      background: #0f3460;
+      border-radius: 3px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .progress-fill {
+      background: #4ecca3;
+      height: 100%;
+      transition: width 0.3s;
+    }
+
+    .energy-bar .progress-fill { background: #f39c12; }
+
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #modal-overlay.active {
+      display: flex;
+    }
+
+    #modal-content {
+      background: #16213e;
+      border: 2px solid #4ecca3;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    #modal-content h2 {
+      border: none;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #modal-content p {
+      margin: 15px 0;
+    }
+
+    .modal-buttons {
+      margin-top: 20px;
+    }
+
+    #victory-screen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    #victory-screen.active {
+      display: flex;
+    }
+
+    #victory-screen h1 {
+      font-size: 3em;
+      color: #f1c40f;
+      text-shadow: 0 0 30px #f1c40f;
+      margin-bottom: 20px;
+    }
+
+    #victory-screen p {
+      font-size: 1.2em;
+      margin: 10px 0;
+    }
+
+    #victory-stats {
+      margin: 30px 0;
+      text-align: left;
+      background: #16213e;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    .career-stats {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #0f3460;
+    }
+
+    .speed-controls {
+      display: inline-block;
+      margin-left: 20px;
+    }
+
+    .speed-controls button {
+      padding: 5px 10px;
+      margin: 0 2px;
+    }
+
+    .speed-controls button.active {
+      background: #f39c12;
+    }
+
+    .tournament-active {
+      background: #2a4a2a !important;
+      border: 1px solid #4ecca3;
+    }
+
+    .major-tournament {
+      border-left: 3px solid #f1c40f;
+    }
+
+    .subscription-item {
+      background: #1a3a1a;
+      border: 1px solid #4ecca3;
+    }
+
+    .subscription-item.inactive {
+      background: #0f3460;
+      border: 1px solid #333;
+    }
+  </style>
 </head>
-<body>
-  <canvas id="canvas"></canvas>
+<body class="phase-1">
+  <header>
+    <h1>SCRATCH</h1>
+    <div id="phase-indicator">Phase 1: The Hacker</div>
+    <div id="time-display">Day 1, 6:00 AM | Week 1, Year 1</div>
+  </header>
 
-  <!-- Top Left UI -->
-  <div id="score-panel" class="ui-panel top-left">
-    <div class="score-display">
-      <span class="label">Score</span>
-      <span id="score-value" class="value">0</span>
-    </div>
-    <div class="unlock-progress">
-      <span class="label">Next unlock: <span id="next-unlock-points">500</span></span>
-      <div class="progress-bar">
-        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+  <main>
+    <section id="stats">
+      <h2>Status</h2>
+      <div class="stat-grid">
+        <div>Handicap: <span class="stat-value" id="handicap">36.0</span></div>
+        <div>Cash: <span class="stat-value" id="cash">$100</span></div>
+        <div>Reputation: <span class="stat-value" id="reputation">0</span></div>
+        <div>Age: <span class="stat-value" id="age">18</span></div>
       </div>
-      <span id="next-unlock-name" class="unlock-name">Pack 2: Hazards</span>
+      <div style="margin-top: 10px;">
+        Energy: <span id="energy">100</span>/<span id="maxEnergy">100</span>
+        <div class="progress-bar energy-bar">
+          <div class="progress-fill" id="energy-bar" style="width: 100%"></div>
+        </div>
+      </div>
+      <div id="career-stats" class="career-stats" style="display: none;"></div>
+    </section>
+
+    <section id="attributes">
+      <h2>Skills</h2>
+      <div class="attr-grid">
+        <div>Driving: <span class="stat-value" id="driving">5</span></div>
+        <div>Irons: <span class="stat-value" id="irons">5</span></div>
+        <div>Short Game: <span class="stat-value" id="shortGame">5</span></div>
+        <div>Putting: <span class="stat-value" id="putting">5</span></div>
+        <div>Mental: <span class="stat-value" id="mental">5</span></div>
+        <div>Fitness: <span class="stat-value" id="fitness">10</span></div>
+        <div>Course Mgmt: <span class="stat-value" id="courseManagement">5</span></div>
+      </div>
+    </section>
+
+    <div class="columns">
+      <section id="actions">
+        <h2>Actions</h2>
+        <div id="action-buttons"></div>
+      </section>
+
+      <section id="upgrades">
+        <h2>Upgrades & Equipment</h2>
+        <div id="upgrade-list"></div>
+      </section>
     </div>
-    <div class="terrain-name">
-      Terrain: <span id="terrain-name">Meadow</span>
+
+    <section id="tournaments">
+      <h2>Tournaments</h2>
+      <div id="tournament-list"></div>
+    </section>
+
+    <section id="log">
+      <h2>Log</h2>
+      <div id="log-entries"></div>
+    </section>
+  </main>
+
+  <footer>
+    <button id="save-btn">Save</button>
+    <button id="load-btn">Load</button>
+    <button id="reset-btn">Reset</button>
+    <span class="speed-controls">
+      Speed:
+      <button id="speed-1" class="active">1x</button>
+      <button id="speed-2">2x</button>
+      <button id="speed-5">5x</button>
+      <button id="speed-0">Pause</button>
+    </span>
+  </footer>
+
+  <div id="modal-overlay">
+    <div id="modal-content">
+      <h2 id="modal-title">Decision</h2>
+      <div id="modal-body"></div>
+      <div class="modal-buttons" id="modal-buttons"></div>
     </div>
   </div>
 
-  <!-- Top Right UI -->
-  <div id="controls-panel" class="ui-panel top-right">
-    <button id="btn-sound" class="icon-btn" title="Toggle Sound">🔊</button>
-    <button id="btn-screenshot" class="icon-btn" title="Screenshot">📸</button>
-    <button id="btn-clear" class="icon-btn" title="Clear All">🗑️</button>
+  <div id="victory-screen">
+    <h1 id="victory-title">VICTORY</h1>
+    <p id="victory-subtitle"></p>
+    <div id="victory-stats"></div>
+    <button onclick="location.reload()">Play Again</button>
   </div>
 
-  <!-- Point Preview (shows when placing) -->
-  <div id="point-preview" class="point-preview hidden">+0</div>
+  <script>
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    const CONFIG = {
+      TICK_MS: 1000,
+      HOURS_PER_TICK: 1,
 
-  <!-- Bottom Element Tray -->
-  <div id="element-tray" class="element-tray">
-    <div class="pack-section" data-pack="1">
-      <div class="pack-label">Basics</div>
-      <div class="pack-elements">
-        <button class="element-btn" data-element="tee" title="Tee Box (+10)">
-          <div class="element-icon tee-icon"></div>
-          <span>Tee</span>
-        </button>
-        <button class="element-btn" data-element="fairway" title="Fairway (+5)">
-          <div class="element-icon fairway-icon"></div>
-          <span>Fairway</span>
-        </button>
-        <button class="element-btn" data-element="green" title="Green (+15)">
-          <div class="element-icon green-icon"></div>
-          <span>Green</span>
-        </button>
-        <button class="element-btn" data-element="cartpath" title="Cart Path (+5)">
-          <div class="element-icon cartpath-icon"></div>
-          <span>Path</span>
-        </button>
-      </div>
-    </div>
+      MAX_ENERGY_BASE: 100,
+      ENERGY_REGEN_PER_HOUR: 3,
+      SLEEP_ENERGY_RESTORE: 80,
 
-    <div class="pack-section" data-pack="2">
-      <div class="pack-label">Hazards</div>
-      <div class="pack-elements">
-        <button class="element-btn locked" data-element="bunker" title="Bunker (+10)">
-          <div class="element-icon bunker-icon"></div>
-          <span>Bunker</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-        <button class="element-btn locked" data-element="pond" title="Pond (+20)">
-          <div class="element-icon pond-icon"></div>
-          <span>Pond</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-      </div>
-    </div>
+      HANDICAP_BASE: 36,
+      SKILL_TO_HANDICAP_RATIO: 44 / 95,
 
-    <div class="pack-section" data-pack="3">
-      <div class="pack-label">Nature</div>
-      <div class="pack-elements">
-        <button class="element-btn locked" data-element="tree" title="Tree (+8)">
-          <div class="element-icon tree-icon"></div>
-          <span>Tree</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-        <button class="element-btn locked" data-element="treecluster" title="Tree Cluster (+20)">
-          <div class="element-icon treecluster-icon"></div>
-          <span>Trees</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-        <button class="element-btn locked" data-element="flowers" title="Flowers (+5)">
-          <div class="element-icon flowers-icon"></div>
-          <span>Flowers</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-        <button class="element-btn locked" data-element="boulder" title="Boulder (+8)">
-          <div class="element-icon boulder-icon"></div>
-          <span>Boulder</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-      </div>
-    </div>
+      PHASE2_HANDICAP: 20,
+      PHASE3_HANDICAP: 10,
+      PHASE4_HANDICAP: 0,
 
-    <div class="pack-section" data-pack="4">
-      <div class="pack-label">Structures</div>
-      <div class="pack-elements">
-        <button class="element-btn locked" data-element="clubhouse" title="Clubhouse (+40)">
-          <div class="element-icon clubhouse-icon"></div>
-          <span>Clubhouse</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-        <button class="element-btn locked" data-element="bridge" title="Bridge (+25)">
-          <div class="element-icon bridge-icon"></div>
-          <span>Bridge</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-        <button class="element-btn locked" data-element="bench" title="Bench (+10)">
-          <div class="element-icon bench-icon"></div>
-          <span>Bench</span>
-          <div class="lock-overlay">🔒</div>
-        </button>
-      </div>
-    </div>
-  </div>
+      SKILL_CAP_PHASE1: 25,
+      SKILL_CAP_PHASE2: 45,
+      SKILL_CAP_PHASE3: 65,
+      SKILL_CAP_PHASE4: 80,
+      SKILL_CAP_PHASE5: 90,
+      SKILL_CAP_PHASE6: 100,
 
-  <!-- Instructions overlay -->
-  <div id="instructions" class="instructions">
-    <p>Click to select • Click/drag to place • Right-click to cancel • Q/E to rotate camera • Scroll to zoom</p>
-  </div>
+      COACH_MULTIPLIER: 1.5,
+      CADDIE_COURSE_BONUS: 10,
+      CADDIE_MENTAL_BONUS: 5,
 
-  <!-- Unlock notification -->
-  <div id="unlock-notification" class="unlock-notification hidden">
-    <div class="unlock-content">
-      <div class="unlock-icon">🎉</div>
-      <div class="unlock-text">
-        <span class="unlock-title">Pack Unlocked!</span>
-        <span id="unlock-pack-name" class="unlock-pack-name">Hazards</span>
-      </div>
-    </div>
-  </div>
+      PEAK_AGE: 32,
+      DECLINE_START_AGE: 35,
+      DECLINE_RATE: 0.02,
 
-  <!-- Screenshot mode watermark -->
-  <div id="watermark" class="watermark hidden">Links</div>
+      STARTING_CASH: 100,
 
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      WORK_PAY: 75,
+      WORK_ENERGY: 50,
+    };
+
+    // ============================================
+    // GAME STATE
+    // ============================================
+    const defaultState = {
+      day: 1,
+      hour: 6,
+
+      handicap: 36.0,
+      cash: CONFIG.STARTING_CASH,
+      energy: CONFIG.MAX_ENERGY_BASE,
+      maxEnergy: CONFIG.MAX_ENERGY_BASE,
+      reputation: 0,
+
+      driving: 5,
+      irons: 5,
+      shortGame: 5,
+      putting: 5,
+      mental: 5,
+      fitness: 10,
+      courseManagement: 5,
+
+      phase: 1,
+      tourCard: false,
+      tourWins: 0,
+      majorWins: 0,
+      majorsThisYear: [],
+      allMajorWins: [],
+      earnings: 0,
+      careerEarnings: 0,
+      worldRanking: null,
+      fedexPoints: 0,
+      fedexRank: null,
+      legacyPoints: 0,
+      weeksAtOne: 0,
+
+      driverQuality: 1.0,
+      ironsQuality: 1.0,
+      wedgesQuality: 1.0,
+      putterQuality: 1.0,
+
+      unlocks: {},
+      purchasedUpgrades: [],
+      subscriptions: [],
+      qualifiedFor: [],
+
+      currentTournament: null,
+      tournamentDay: 0,
+      tournamentScores: [],
+
+      week: 1,
+      year: 1,
+      age: 18,
+
+      hasAgent: false,
+      hasCaddie: false,
+      hasCoach: false,
+      hasEliteCaddie: false,
+      collegePath: null,
+      collegeYearsLeft: 0,
+
+      careerGrandSlamAchieved: false,
+      calendarGrandSlam: false,
+
+      log: []
+    };
+
+    let state = JSON.parse(JSON.stringify(defaultState));
+    let gameSpeed = 1;
+    let tickInterval = null;
+
+    // ============================================
+    // ACTIONS
+    // ============================================
+    const ACTIONS = {
+      practicePutting: {
+        name: 'Practice Putting',
+        desc: 'Free practice on the putting green',
+        energy: 10,
+        cost: 0,
+        phases: [1, 2, 3, 4, 5, 6, 7],
+        effect: () => {
+          const gain = 0.15 * getCoachMult();
+          state.putting = Math.min(getSkillCap(), state.putting + gain);
+          addLog(`Practiced putting. (+${gain.toFixed(2)} putting)`);
+        },
+        available: () => true
+      },
+      practiceChipping: {
+        name: 'Practice Chipping',
+        desc: 'Work on your short game',
+        energy: 10,
+        cost: 0,
+        phases: [1, 2, 3, 4, 5, 6, 7],
+        effect: () => {
+          const gain = 0.15 * getCoachMult();
+          state.shortGame = Math.min(getSkillCap(), state.shortGame + gain);
+          addLog(`Practiced chipping. (+${gain.toFixed(2)} short game)`);
+        },
+        available: () => true
+      },
+      hitRange: {
+        name: 'Hit the Range',
+        desc: 'Work on full swing',
+        energy: 20,
+        cost: () => state.unlocks.rangeMembership ? 0 : 5,
+        phases: [1, 2, 3, 4, 5, 6, 7],
+        effect: () => {
+          const gain = 0.1 * getCoachMult();
+          state.driving = Math.min(getSkillCap(), state.driving + gain);
+          state.irons = Math.min(getSkillCap(), state.irons + gain);
+          addLog(`Range session. (+${gain.toFixed(2)} driving/irons)`);
+        },
+        available: () => state.cash >= (state.unlocks.rangeMembership ? 0 : 5)
+      },
+      play9: {
+        name: 'Play 9 Holes',
+        desc: 'Quick round',
+        energy: 40,
+        cost: 25,
+        phases: [1, 2, 3],
+        effect: () => {
+          const score = simulateCasualRound(9);
+          state.reputation += 1;
+          applyRoundXP(1.0);
+          if (Math.random() < 0.3) {
+            state.cash += 20;
+            addLog(`Shot ${score}. Won $20 in skins!`, 'positive');
+          } else {
+            addLog(`Shot ${score}. Good practice.`);
+          }
+        },
+        available: () => state.cash >= 25
+      },
+      play18: {
+        name: 'Play 18 Holes',
+        desc: 'Full round',
+        energy: 70,
+        cost: 45,
+        phases: [2, 3, 4, 5, 6, 7],
+        effect: () => {
+          const score = simulateCasualRound(18);
+          state.reputation += 3;
+          applyRoundXP(2.5);
+          addLog(`Shot ${score} for 18 holes.`);
+        },
+        available: () => state.cash >= 45
+      },
+      focusedPractice: {
+        name: 'Focused Practice',
+        desc: 'Intensive work on one area',
+        energy: 30,
+        cost: 15,
+        phases: [2, 3, 4, 5, 6, 7],
+        effect: () => {
+          openFocusedPracticeModal();
+        },
+        available: () => state.cash >= 15
+      },
+      work: {
+        name: 'Work Shift',
+        desc: 'Earn $75 at your day job',
+        energy: CONFIG.WORK_ENERGY,
+        cost: 0,
+        phases: [1, 2, 3, 4],
+        effect: () => {
+          state.cash += CONFIG.WORK_PAY;
+          addLog(`Worked a shift. (+$${CONFIG.WORK_PAY})`);
+        },
+        available: () => true
+      },
+      sleep: {
+        name: 'Sleep',
+        desc: 'Rest until tomorrow',
+        energy: 0,
+        cost: 0,
+        phases: [1, 2, 3, 4, 5, 6, 7],
+        effect: () => {
+          state.hour = 24;
+          state.energy = Math.min(state.maxEnergy, CONFIG.SLEEP_ENERGY_RESTORE);
+          addLog('Slept well. Ready for tomorrow.');
+        },
+        available: () => true
+      },
+      rest: {
+        name: 'Rest Week',
+        desc: 'Skip tournament, recover fully',
+        energy: 0,
+        cost: 0,
+        phases: [5, 6, 7],
+        effect: () => {
+          state.energy = state.maxEnergy;
+          state.hour = 24;
+          addLog('Took a rest week. Fully recovered.', 'positive');
+        },
+        available: () => !state.currentTournament
+      }
+    };
+
+    // ============================================
+    // UPGRADES
+    // ============================================
+    const UPGRADES = [
+      // Phase 1
+      { id: 'usedIrons', name: 'Used Irons', desc: '+10% irons', cost: 150, phase: 1, effect: () => { state.ironsQuality += 0.1; }, req: () => true },
+      { id: 'usedDriver', name: 'Used Driver', desc: '+10% driving', cost: 150, phase: 1, effect: () => { state.driverQuality += 0.1; }, req: () => true },
+      { id: 'golfShoes', name: 'Golf Shoes', desc: '+5 max energy', cost: 80, phase: 1, effect: () => { state.maxEnergy += 5; }, req: () => true },
+      { id: 'glove', name: 'Golf Glove', desc: '+5% irons', cost: 15, phase: 1, effect: () => { state.ironsQuality += 0.05; }, req: () => true },
+      { id: 'puttingLesson', name: 'Putting Lesson', desc: '+5 putting', cost: 50, phase: 1, effect: () => { state.putting += 5; }, req: () => state.handicap <= 32 },
+      { id: 'swingLesson', name: 'Swing Lesson', desc: '+3 driving/irons', cost: 80, phase: 1, effect: () => { state.driving += 3; state.irons += 3; }, req: () => state.handicap <= 28 },
+      { id: 'rangeMembership', name: 'Range Membership', desc: 'Free range sessions', cost: 200, phase: 1, effect: () => { state.unlocks.rangeMembership = true; }, req: () => state.handicap <= 25 },
+
+      // Phase 2
+      { id: 'decentIrons', name: 'Decent Irons', desc: '+20% irons', cost: 500, phase: 2, effect: () => { state.ironsQuality += 0.2; }, req: () => true },
+      { id: 'decentDriver', name: 'Decent Driver', desc: '+20% driving', cost: 500, phase: 2, effect: () => { state.driverQuality += 0.2; }, req: () => true },
+      { id: 'wedgeSet', name: 'Wedge Set', desc: '+20% short game', cost: 300, phase: 2, effect: () => { state.wedgesQuality += 0.2; }, req: () => true },
+      { id: 'decentPutter', name: 'Decent Putter', desc: '+15% putting', cost: 200, phase: 2, effect: () => { state.putterQuality += 0.15; }, req: () => true },
+      { id: 'mentalBook', name: 'Mental Game Book', desc: '+3 mental', cost: 25, phase: 2, effect: () => { state.mental += 3; }, req: () => state.handicap <= 16 },
+      { id: 'clubFitting', name: 'Club Fitting', desc: '+10% all equipment', cost: 300, phase: 2, effect: () => { state.driverQuality += 0.1; state.ironsQuality += 0.1; state.wedgesQuality += 0.1; state.putterQuality += 0.1; }, req: () => state.handicap <= 12 },
+
+      // Phase 3
+      { id: 'goodIrons', name: 'Good Irons', desc: '+30% irons', cost: 1500, phase: 3, effect: () => { state.ironsQuality += 0.3; }, req: () => true },
+      { id: 'goodDriver', name: 'Good Driver', desc: '+30% driving', cost: 1500, phase: 3, effect: () => { state.driverQuality += 0.3; }, req: () => true },
+      { id: 'premiumWedges', name: 'Premium Wedges', desc: '+30% short game', cost: 800, phase: 3, effect: () => { state.wedgesQuality += 0.3; }, req: () => true },
+      { id: 'goodPutter', name: 'Good Putter', desc: '+25% putting', cost: 500, phase: 3, effect: () => { state.putterQuality += 0.25; }, req: () => true },
+      { id: 'courseStrategy', name: 'Strategy Course', desc: '+10 course mgmt', cost: 500, phase: 3, effect: () => { state.courseManagement += 10; }, req: () => state.handicap <= 5 },
+
+      // Phase 4
+      { id: 'tourFitting', name: 'Tour-Level Fitting', desc: '+20% all equipment', cost: 2000, phase: 4, effect: () => { state.driverQuality += 0.2; state.ironsQuality += 0.2; state.wedgesQuality += 0.2; state.putterQuality += 0.2; }, req: () => true },
+      { id: 'hireCaddie', name: 'Hire Caddie', desc: '+10 course mgmt, +5 mental in events', cost: 1000, phase: 4, effect: () => { state.hasCaddie = true; state.subscriptions.push('caddie'); }, req: () => !state.hasCaddie, subscription: { id: 'caddie', cost: 300, name: 'Caddie' } },
+      { id: 'hireAgent', name: 'Hire Agent', desc: 'Better sponsors (10% cut)', cost: 500, phase: 4, effect: () => { state.hasAgent = true; }, req: () => !state.hasAgent && state.reputation >= 2000 },
+
+      // Phase 5
+      { id: 'eliteCaddie', name: 'Elite Caddie', desc: '+15 course mgmt, +10 mental', cost: 3000, phase: 5, effect: () => { state.hasEliteCaddie = true; state.hasCaddie = true; const idx = state.subscriptions.indexOf('caddie'); if (idx > -1) state.subscriptions.splice(idx, 1); state.subscriptions.push('eliteCaddie'); }, req: () => state.hasCaddie && !state.hasEliteCaddie, subscription: { id: 'eliteCaddie', cost: 1000, name: 'Elite Caddie' } },
+      { id: 'fullTeam', name: 'Full Team', desc: 'Coach+trainer+physio', cost: 5000, phase: 5, effect: () => { state.hasCoach = true; state.subscriptions.push('fullTeam'); }, req: () => state.tourWins >= 1 && !state.hasCoach, subscription: { id: 'fullTeam', cost: 3000, name: 'Full Team' } },
+      { id: 'privateJet', name: 'Private Jet Access', desc: 'No travel fatigue', cost: 10000, phase: 5, effect: () => { state.unlocks.privateJet = true; state.subscriptions.push('jet'); }, req: () => state.careerEarnings >= 1000000, subscription: { id: 'jet', cost: 5000, name: 'Jet Access' } },
+
+      // Phase 6
+      { id: 'legacyCoach', name: 'Legendary Coach', desc: '2x all gains', cost: 50000, phase: 6, effect: () => { state.unlocks.legacyCoach = true; }, req: () => state.majorWins >= 1 },
+    ];
+
+    // ============================================
+    // SUBSCRIPTIONS (weekly costs)
+    // ============================================
+    const SUBSCRIPTION_COSTS = {
+      caddie: 300,
+      eliteCaddie: 1000,
+      fullTeam: 3000,
+      jet: 5000,
+      coach: 500,
+      psychologist: 200,
+      fitness: 300
+    };
+
+    // ============================================
+    // TOURNAMENTS
+    // ============================================
+    const TOURNAMENTS = [
+      // Phase 1
+      { id: 'club9', name: 'Club 9-Hole', phase: 1, freq: 'weekly', entry: 20, purse: 100, rounds: 1, holes: 9, cut: false, field: 24, diff: 30, rep: 5, req: () => true },
+      { id: 'clubChamp', name: 'Club Championship', phase: 1, freq: 'monthly', entry: 50, purse: 300, rounds: 2, holes: 18, cut: false, field: 48, diff: 35, rep: 20, req: () => state.handicap <= 30 },
+
+      // Phase 2
+      { id: 'regional', name: 'Regional Amateur', phase: 2, freq: 'monthly', entry: 75, purse: 500, rounds: 2, holes: 18, cut: true, field: 80, diff: 45, rep: 50, req: () => state.handicap <= 18 },
+      { id: 'stateQual', name: 'State Am Qualifier', phase: 2, freq: 'annual', entry: 100, purse: 0, rounds: 1, holes: 18, cut: false, field: 100, diff: 50, rep: 100, advances: 'stateAm', req: () => state.handicap <= 15 },
+
+      // Phase 3
+      { id: 'stateAm', name: 'State Amateur', phase: 3, freq: 'annual', entry: 150, purse: 0, rounds: 4, holes: 18, cut: true, field: 156, diff: 60, rep: 300, req: () => state.qualifiedFor.includes('stateAm') },
+      { id: 'usAmQual', name: 'US Am Qualifier', phase: 3, freq: 'annual', entry: 200, purse: 0, rounds: 1, holes: 18, cut: false, field: 120, diff: 65, rep: 200, advances: 'usAm', req: () => state.handicap <= 5 },
+      { id: 'usAm', name: 'US Amateur', phase: 3, freq: 'annual', entry: 0, purse: 0, rounds: 4, holes: 18, cut: true, field: 312, diff: 75, rep: 1000, req: () => state.qualifiedFor.includes('usAm') },
+
+      // Phase 4
+      { id: 'miniTour', name: 'Mini Tour Event', phase: 4, freq: 'weekly', entry: 400, purse: 10000, rounds: 2, holes: 18, cut: true, field: 100, diff: 70, rep: 30, req: () => true },
+      { id: 'monday', name: 'Monday Qualifier', phase: 4, freq: 'weekly', entry: 150, purse: 0, rounds: 1, holes: 18, cut: false, field: 150, diff: 80, rep: 50, advances: 'pgaSpot', req: () => true },
+      { id: 'qSchool1', name: 'Q-School Stage 1', phase: 4, freq: 'annual', entry: 3000, purse: 0, rounds: 4, holes: 18, cut: true, field: 300, diff: 75, rep: 100, advances: 'qSchool2', req: () => state.week >= 40 },
+      { id: 'qSchool2', name: 'Q-School Stage 2', phase: 4, freq: 'annual', entry: 4500, purse: 0, rounds: 4, holes: 18, cut: true, field: 150, diff: 80, rep: 200, advances: 'qSchoolFinal', req: () => state.qualifiedFor.includes('qSchool2') },
+      { id: 'qSchoolFinal', name: 'Q-School Final', phase: 4, freq: 'annual', entry: 0, purse: 0, rounds: 6, holes: 18, cut: false, field: 80, diff: 85, rep: 500, grantsCard: true, req: () => state.qualifiedFor.includes('qSchoolFinal') },
+
+      // Phase 5 - PGA Tour
+      { id: 'pgaEvent', name: 'PGA Tour Event', phase: 5, freq: 'weekly', entry: 0, purse: 8000000, rounds: 4, holes: 18, cut: true, field: 156, diff: 85, rep: 100, fedex: true, ranking: true, req: () => state.tourCard },
+      { id: 'elevated', name: 'Elevated Event', phase: 5, freq: 'monthly', entry: 0, purse: 20000000, rounds: 4, holes: 18, cut: true, field: 70, diff: 90, rep: 300, fedex: true, ranking: true, req: () => state.tourCard && (state.fedexRank === null || state.fedexRank <= 70) },
+
+      // Majors
+      { id: 'masters', name: 'The Masters', phase: 5, freq: 'annual', week: 14, entry: 0, purse: 18000000, rounds: 4, holes: 18, cut: true, field: 90, diff: 95, rep: 2000, major: 'masters', fedex: true, ranking: true, req: () => checkMajorEligibility('masters') },
+      { id: 'pga', name: 'PGA Championship', phase: 5, freq: 'annual', week: 20, entry: 0, purse: 17500000, rounds: 4, holes: 18, cut: true, field: 156, diff: 93, rep: 1800, major: 'pga', fedex: true, ranking: true, req: () => checkMajorEligibility('pga') },
+      { id: 'usOpen', name: 'US Open', phase: 5, freq: 'annual', week: 24, entry: 0, purse: 20000000, rounds: 4, holes: 18, cut: true, field: 156, diff: 96, rep: 2000, major: 'usOpen', fedex: true, ranking: true, req: () => checkMajorEligibility('usOpen') },
+      { id: 'theOpen', name: 'The Open', phase: 5, freq: 'annual', week: 28, entry: 0, purse: 17000000, rounds: 4, holes: 18, cut: true, field: 156, diff: 94, rep: 1800, major: 'open', fedex: true, ranking: true, req: () => checkMajorEligibility('open') },
+    ];
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function formatNumber(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+      return Math.floor(n).toLocaleString();
+    }
+
+    function formatScore(s) {
+      if (s === 0) return 'E';
+      return s > 0 ? '+' + s : String(s);
+    }
+
+    function pick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function getCoachMult() {
+      if (state.unlocks.legacyCoach) return 2.0;
+      if (state.hasCoach) return CONFIG.COACH_MULTIPLIER;
+      return 1.0;
+    }
+
+    function getSkillCap() {
+      const caps = [25, 45, 65, 80, 90, 100, 100];
+      return caps[state.phase - 1] || 100;
+    }
+
+    function getCost(action) {
+      return typeof action.cost === 'function' ? action.cost() : action.cost;
+    }
+
+    function checkMajorEligibility(major) {
+      if (!state.tourCard) return false;
+      if (state.worldRanking && state.worldRanking <= 50) return true;
+      if (state.tourWins > 0) return true;
+      if (state.majorWins > 0) return true;
+      return false;
+    }
+
+    // ============================================
+    // GAME LOGIC
+    // ============================================
+    function addLog(msg, type = 'normal') {
+      state.log.unshift({ msg, type, day: state.day });
+      if (state.log.length > 100) state.log.pop();
+      renderLog();
+    }
+
+    function updateHandicap() {
+      const avgSkill = (state.driving + state.irons + state.shortGame + state.putting + state.courseManagement) / 5;
+      let newHandicap = CONFIG.HANDICAP_BASE - (avgSkill - 5) * CONFIG.SKILL_TO_HANDICAP_RATIO;
+
+      // Phase-based floor
+      const floors = [20, 10, 0, -4, -6, -8, -8];
+      const floor = floors[state.phase - 1] || -8;
+      newHandicap = Math.max(newHandicap, floor);
+
+      state.handicap = state.handicap * 0.9 + newHandicap * 0.1;
+      state.handicap = Math.round(state.handicap * 10) / 10;
+    }
+
+    function checkPhaseTransition() {
+      const oldPhase = state.phase;
+
+      if (state.phase === 1 && state.handicap <= CONFIG.PHASE2_HANDICAP) {
+        state.phase = 2;
+        addLog('PHASE 2: The Club Player! You\'re getting serious.', 'milestone');
+      }
+      if (state.phase === 2 && state.handicap <= CONFIG.PHASE3_HANDICAP) {
+        state.phase = 3;
+        addLog('PHASE 3: The Amateur Star! National stage awaits.', 'milestone');
+      }
+      if (state.phase === 3 && state.handicap <= CONFIG.PHASE4_HANDICAP) {
+        state.phase = 4;
+        addLog('PHASE 4: Turning Pro! Time to chase that tour card.', 'milestone');
+      }
+      if (state.phase === 4 && state.tourCard) {
+        state.phase = 5;
+        addLog('PHASE 5: PGA Tour! You made it to the big leagues.', 'milestone');
+      }
+      if (state.phase === 5 && state.majorWins >= 1) {
+        state.phase = 6;
+        addLog('PHASE 6: Chasing Greatness! A major champion.', 'milestone');
+      }
+      if (state.phase === 6 && state.careerGrandSlamAchieved) {
+        state.phase = 7;
+        addLog('PHASE 7: The Legend! Career Grand Slam complete.', 'milestone');
+      }
+
+      if (state.phase !== oldPhase) {
+        document.body.className = `phase-${state.phase}`;
       }
     }
+
+    function processAging() {
+      if (state.age >= CONFIG.DECLINE_START_AGE) {
+        const decline = CONFIG.DECLINE_RATE * (1 - state.fitness / 200);
+        const skills = ['driving', 'irons', 'shortGame', 'putting', 'mental'];
+        skills.forEach(s => {
+          state[s] = Math.max(5, state[s] * (1 - decline));
+        });
+        addLog(`Age ${state.age}. Skills declining slightly.`, 'negative');
+      }
+    }
+
+    function processWeeklyCosts() {
+      let totalCost = 0;
+      state.subscriptions.forEach(sub => {
+        const cost = SUBSCRIPTION_COSTS[sub] || 0;
+        totalCost += cost;
+      });
+
+      if (totalCost > 0) {
+        state.cash -= totalCost;
+        if (state.cash < 0) {
+          addLog(`Can't afford weekly costs! Cancelling subscriptions.`, 'negative');
+          state.subscriptions = [];
+          state.hasCaddie = false;
+          state.hasEliteCaddie = false;
+          state.hasCoach = false;
+          state.cash = 0;
+        }
+      }
+
+      // Sponsor income
+      let sponsorIncome = 0;
+      if (state.reputation >= 100) sponsorIncome += 50;
+      if (state.reputation >= 500) sponsorIncome += 150;
+      if (state.reputation >= 2000) sponsorIncome += 300;
+      if (state.reputation >= 10000) sponsorIncome += 1000;
+      if (state.tourCard) sponsorIncome += 2000;
+      if (state.tourWins > 0) sponsorIncome += 3000;
+      if (state.majorWins > 0) sponsorIncome += 10000;
+
+      if (state.hasAgent) sponsorIncome *= 2;
+
+      if (sponsorIncome > 0) {
+        const agentCut = state.hasAgent ? sponsorIncome * 0.1 : 0;
+        state.cash += sponsorIncome - agentCut;
+      }
+    }
+
+    function applyRoundXP(mult) {
+      const gain = 0.05 * mult * getCoachMult();
+      const cap = getSkillCap();
+      state.driving = Math.min(cap, state.driving + gain);
+      state.irons = Math.min(cap, state.irons + gain);
+      state.shortGame = Math.min(cap, state.shortGame + gain);
+      state.putting = Math.min(cap, state.putting + gain);
+      state.courseManagement = Math.min(cap, state.courseManagement + gain * 0.5);
+    }
+
+    function simulateCasualRound(holes) {
+      const avgSkill = (state.driving + state.irons + state.shortGame + state.putting) / 4;
+      const par = holes === 9 ? 36 : 72;
+      const expected = par + (36 - state.handicap) * (holes / 18) * -1;
+      const variance = (Math.random() - 0.5) * 6;
+      const score = Math.round(expected + variance);
+      return score;
+    }
+
+    function getPlayerStrength() {
+      const avgSkill = (state.driving * state.driverQuality + state.irons * state.ironsQuality +
+                        state.shortGame * state.wedgesQuality + state.putting * state.putterQuality) / 4;
+      let bonus = 0;
+      if (state.hasCaddie) bonus += 5;
+      if (state.hasEliteCaddie) bonus += 10;
+      bonus += state.mental * 0.2;
+      bonus += state.courseManagement * 0.1;
+      return avgSkill + bonus;
+    }
+
+    function simulateTournamentRound(difficulty) {
+      const strength = getPlayerStrength();
+      const expected = 72 - (strength - 50) * 0.16;
+      const diffMod = (difficulty - 50) * 0.05;
+      const variance = (Math.random() - 0.5) * 8;
+      const mentalBonus = state.mental * 0.02;
+      return Math.round(expected + diffMod + variance - mentalBonus);
+    }
+
+    function generateFieldScores(field, rounds, difficulty) {
+      const scores = [];
+      for (let i = 0; i < field; i++) {
+        let total = 0;
+        const skill = 50 + Math.random() * 40 + (difficulty - 50) * 0.3;
+        for (let r = 0; r < rounds; r++) {
+          const expected = 72 - (skill - 50) * 0.14;
+          total += Math.round(expected + (Math.random() - 0.5) * 8);
+        }
+        scores.push(total);
+      }
+      return scores.sort((a, b) => a - b);
+    }
+
+    // ============================================
+    // TOURNAMENT SYSTEM
+    // ============================================
+    function enterTournament(tournament) {
+      if (state.currentTournament) return;
+      if (state.cash < tournament.entry) {
+        addLog(`Can't afford $${tournament.entry} entry fee.`, 'negative');
+        return;
+      }
+      if (state.energy < 50) {
+        addLog(`Too tired to compete.`, 'negative');
+        return;
+      }
+
+      state.cash -= tournament.entry;
+      state.currentTournament = tournament;
+      state.tournamentDay = 0;
+      state.tournamentScores = [];
+
+      addLog(`Entered ${tournament.name}. Entry: $${tournament.entry}`, 'info');
+      playTournamentRound();
+    }
+
+    function playTournamentRound() {
+      const t = state.currentTournament;
+      if (!t) return;
+
+      state.tournamentDay++;
+      const roundScore = simulateTournamentRound(t.diff);
+      state.tournamentScores.push(roundScore);
+      state.energy = Math.max(0, state.energy - 25);
+
+      const total = state.tournamentScores.reduce((a, b) => a + b, 0);
+      const totalVsPar = total - (72 * state.tournamentDay);
+
+      addLog(`Round ${state.tournamentDay}: ${roundScore} (${formatScore(roundScore - 72)}) | Total: ${formatScore(totalVsPar)}`);
+
+      // Check cut after round 2
+      if (state.tournamentDay === 2 && t.cut) {
+        const fieldScores = generateFieldScores(t.field, 2, t.diff);
+        const cutLine = fieldScores[Math.floor(t.field * 0.5)];
+        if (total > cutLine + 2) {
+          addLog(`Missed the cut. Better luck next time.`, 'negative');
+          finishTournament(false);
+          return;
+        } else {
+          addLog(`Made the cut! Weekend golf.`, 'positive');
+        }
+      }
+
+      // Tournament complete
+      if (state.tournamentDay >= t.rounds) {
+        finishTournament(true);
+      }
+    }
+
+    function finishTournament(completed) {
+      const t = state.currentTournament;
+      if (!t) return;
+
+      if (!completed) {
+        state.currentTournament = null;
+        return;
+      }
+
+      const total = state.tournamentScores.reduce((a, b) => a + b, 0);
+      const fieldScores = generateFieldScores(t.field - 1, t.rounds, t.diff);
+      fieldScores.push(total);
+      fieldScores.sort((a, b) => a - b);
+      const position = fieldScores.indexOf(total) + 1;
+
+      state.reputation += Math.floor(t.rep / position);
+
+      if (t.purse > 0) {
+        const prizeShare = getPrizeShare(position);
+        const prize = Math.floor(t.purse * prizeShare);
+        const agentCut = state.hasAgent ? Math.floor(prize * 0.1) : 0;
+        state.cash += prize - agentCut;
+        state.earnings += prize;
+        state.careerEarnings += prize;
+        addLog(`Finished T${position}. Prize: $${formatNumber(prize)}`, position <= 10 ? 'positive' : 'normal');
+      } else {
+        addLog(`Finished T${position}.`);
+      }
+
+      // Handle qualifiers
+      if (t.advances && position <= getAdvanceSpots(t)) {
+        state.qualifiedFor.push(t.advances);
+        addLog(`Qualified for ${t.advances}!`, 'milestone');
+      }
+
+      // Tour card from Q-School
+      if (t.grantsCard && position <= 25) {
+        state.tourCard = true;
+        addLog(`YOU EARNED YOUR PGA TOUR CARD!`, 'milestone');
+      }
+
+      // Major win
+      if (t.major && position === 1) {
+        state.majorWins++;
+        state.majorsThisYear.push(t.major);
+        if (!state.allMajorWins.includes(t.major)) {
+          state.allMajorWins.push(t.major);
+        }
+        state.legacyPoints += 500;
+        addLog(`MAJOR CHAMPION! You won ${t.name}!`, 'milestone');
+        checkGrandSlam();
+      }
+
+      // Regular tour win
+      if (position === 1 && t.phase >= 5 && !t.major) {
+        state.tourWins++;
+        state.legacyPoints += 100;
+        addLog(`PGA TOUR WINNER!`, 'milestone');
+      }
+
+      // FedEx points
+      if (t.fedex && position <= 65) {
+        const points = Math.floor(500 / position * 10);
+        state.fedexPoints += points;
+      }
+
+      // Update world ranking
+      if (t.ranking) {
+        updateWorldRanking(position, t.field, t.diff);
+      }
+
+      state.currentTournament = null;
+    }
+
+    function getPrizeShare(position) {
+      const shares = [0.18, 0.108, 0.068, 0.048, 0.04, 0.036, 0.0335, 0.031, 0.029, 0.027,
+                      0.025, 0.023, 0.021, 0.019, 0.018, 0.017, 0.016, 0.015, 0.014, 0.013];
+      if (position <= 20) return shares[position - 1];
+      if (position <= 30) return 0.01;
+      if (position <= 50) return 0.005;
+      return 0.002;
+    }
+
+    function getAdvanceSpots(t) {
+      if (t.id === 'stateQual') return 20;
+      if (t.id === 'usAmQual') return 5;
+      if (t.id === 'monday') return 4;
+      if (t.id.includes('qSchool')) return 25;
+      return 10;
+    }
+
+    function updateWorldRanking(position, field, difficulty) {
+      const pointsEarned = Math.max(1, Math.floor((field - position) * difficulty / 100));
+      if (!state.worldRanking) {
+        state.worldRanking = Math.max(1, 200 - pointsEarned * 2);
+      } else {
+        const improvement = Math.floor(pointsEarned / 5);
+        state.worldRanking = Math.max(1, state.worldRanking - improvement);
+      }
+      if (state.worldRanking === 1) {
+        state.weeksAtOne++;
+        state.legacyPoints += 50;
+      }
+    }
+
+    function checkGrandSlam() {
+      const majors = new Set(state.allMajorWins);
+      if (majors.size === 4 && !state.careerGrandSlamAchieved) {
+        state.careerGrandSlamAchieved = true;
+        state.legacyPoints += 2000;
+        addLog('CAREER GRAND SLAM ACHIEVED!', 'milestone');
+      }
+
+      if (state.majorsThisYear.length === 4) {
+        const thisYear = new Set(state.majorsThisYear);
+        if (thisYear.has('masters') && thisYear.has('pga') && thisYear.has('usOpen') && thisYear.has('open')) {
+          triggerVictory();
+        }
+      }
+    }
+
+    function triggerVictory() {
+      state.calendarGrandSlam = true;
+      document.getElementById('victory-screen').classList.add('active');
+      document.getElementById('victory-title').textContent = 'CALENDAR GRAND SLAM';
+      document.getElementById('victory-subtitle').textContent = `In Year ${state.year}, at age ${state.age}, you achieved the impossible.`;
+      document.getElementById('victory-stats').innerHTML = `
+        <p>Career Wins: ${state.tourWins}</p>
+        <p>Major Championships: ${state.majorWins}</p>
+        <p>Career Earnings: $${formatNumber(state.careerEarnings)}</p>
+        <p>Weeks at #1: ${state.weeksAtOne}</p>
+        <p>Legacy Points: ${state.legacyPoints}</p>
+      `;
+    }
+
+    // ============================================
+    // GAME LOOP
+    // ============================================
+    function tick() {
+      if (state.currentTournament) {
+        // Tournament in progress - auto advance rounds
+        if (state.energy >= 25) {
+          playTournamentRound();
+        }
+        render();
+        return;
+      }
+
+      state.hour += CONFIG.HOURS_PER_TICK;
+
+      // Energy regen during day
+      if (state.hour >= 6 && state.hour < 22) {
+        state.energy = Math.min(state.maxEnergy, state.energy + CONFIG.ENERGY_REGEN_PER_HOUR);
+      }
+
+      // New day
+      if (state.hour >= 24) {
+        state.hour = 6;
+        state.day++;
+
+        // Weekly processing
+        if (state.day % 7 === 0) {
+          state.week++;
+          processWeeklyCosts();
+
+          // Year end
+          if (state.week > 52) {
+            state.week = 1;
+            state.year++;
+            state.age++;
+            state.majorsThisYear = [];
+            state.qualifiedFor = [];
+            state.fedexPoints = 0;
+            processAging();
+            addLog(`Year ${state.year} begins. You are ${state.age}.`, 'info');
+          }
+        }
+      }
+
+      updateHandicap();
+      checkPhaseTransition();
+      render();
+    }
+
+    // ============================================
+    // UI RENDERING
+    // ============================================
+    function render() {
+      document.getElementById('handicap').textContent = state.handicap.toFixed(1);
+      document.getElementById('cash').textContent = '$' + formatNumber(state.cash);
+      document.getElementById('energy').textContent = Math.floor(state.energy);
+      document.getElementById('maxEnergy').textContent = state.maxEnergy;
+      document.getElementById('reputation').textContent = formatNumber(state.reputation);
+      document.getElementById('age').textContent = state.age;
+      document.getElementById('energy-bar').style.width = (state.energy / state.maxEnergy * 100) + '%';
+
+      document.getElementById('driving').textContent = Math.floor(state.driving);
+      document.getElementById('irons').textContent = Math.floor(state.irons);
+      document.getElementById('shortGame').textContent = Math.floor(state.shortGame);
+      document.getElementById('putting').textContent = Math.floor(state.putting);
+      document.getElementById('mental').textContent = Math.floor(state.mental);
+      document.getElementById('fitness').textContent = Math.floor(state.fitness);
+      document.getElementById('courseManagement').textContent = Math.floor(state.courseManagement);
+
+      document.getElementById('phase-indicator').textContent = getPhaseTitle();
+      document.getElementById('time-display').textContent =
+        `Day ${state.day}, ${state.hour}:00 ${state.hour < 12 ? 'AM' : 'PM'} | Week ${state.week}, Year ${state.year}`;
+
+      renderCareerStats();
+      renderActions();
+      renderUpgrades();
+      renderTournaments();
+    }
+
+    function getPhaseTitle() {
+      const titles = {
+        1: 'Phase 1: The Hacker',
+        2: 'Phase 2: The Club Player',
+        3: 'Phase 3: The Amateur Star',
+        4: 'Phase 4: Turning Pro',
+        5: 'Phase 5: The Tour',
+        6: 'Phase 6: Chasing Greatness',
+        7: 'Phase 7: The Legend'
+      };
+      return titles[state.phase];
+    }
+
+    function renderCareerStats() {
+      const container = document.getElementById('career-stats');
+      if (state.phase < 4) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'block';
+      let html = '';
+      if (state.phase >= 4) {
+        html += `<div>Tour Card: ${state.tourCard ? 'YES' : 'No'}</div>`;
+      }
+      if (state.phase >= 5) {
+        html += `<div>Tour Wins: ${state.tourWins} | Majors: ${state.majorWins}</div>`;
+        html += `<div>World Ranking: #${state.worldRanking || '---'}</div>`;
+        html += `<div>Career Earnings: $${formatNumber(state.careerEarnings)}</div>`;
+      }
+      if (state.phase >= 6) {
+        html += `<div>Legacy Points: ${formatNumber(state.legacyPoints)}</div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    function renderActions() {
+      const container = document.getElementById('action-buttons');
+      let html = '';
+
+      if (state.currentTournament) {
+        const t = state.currentTournament;
+        const total = state.tournamentScores.reduce((a, b) => a + b, 0);
+        const vsPar = total - 72 * state.tournamentScores.length;
+        html = `
+          <div class="tournament-active" style="padding: 15px; text-align: center;">
+            <strong>${t.name}</strong><br>
+            Round ${state.tournamentDay}/${t.rounds}<br>
+            Score: ${formatScore(vsPar)}<br>
+            ${state.energy >= 25 ? 'Playing next round...' : 'Need energy to continue'}
+          </div>
+        `;
+        container.innerHTML = html;
+        return;
+      }
+
+      Object.entries(ACTIONS).forEach(([id, action]) => {
+        if (!action.phases.includes(state.phase)) return;
+
+        const cost = getCost(action);
+        const canAfford = state.cash >= cost;
+        const hasEnergy = state.energy >= action.energy;
+        const available = action.available();
+        const disabled = !canAfford || !hasEnergy || !available;
+
+        const costText = [];
+        if (action.energy > 0) costText.push(`${action.energy} energy`);
+        if (cost > 0) costText.push(`$${cost}`);
+
+        html += `
+          <button class="action-btn" onclick="doAction('${id}')" ${disabled ? 'disabled' : ''}>
+            ${action.name}
+            <span class="cost">${costText.join(', ') || 'Free'}</span>
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderUpgrades() {
+      const container = document.getElementById('upgrade-list');
+      let html = '';
+
+      UPGRADES.forEach(upgrade => {
+        if (upgrade.phase > state.phase) return;
+
+        const owned = state.purchasedUpgrades.includes(upgrade.id);
+        const meetsReq = upgrade.req();
+        const canAfford = state.cash >= upgrade.cost;
+
+        let classes = 'upgrade-item';
+        if (owned) classes += ' owned';
+        if (!meetsReq && !owned) classes += ' locked';
+
+        html += `
+          <div class="${classes}">
+            <div class="upgrade-info">
+              <div class="upgrade-name">${upgrade.name}</div>
+              <div class="upgrade-desc">${upgrade.desc}</div>
+              ${!meetsReq && !owned ? '<div class="upgrade-req">Requirements not met</div>' : ''}
+            </div>
+            ${owned ? '<span style="color:#4ecca3">OWNED</span>' :
+              `<button onclick="buyUpgrade('${upgrade.id}')" ${!canAfford || !meetsReq ? 'disabled' : ''}>$${formatNumber(upgrade.cost)}</button>`}
+          </div>
+        `;
+      });
+
+      // Show active subscriptions
+      if (state.subscriptions.length > 0) {
+        html += '<h3 style="margin-top: 15px; color: #4ecca3;">Weekly Costs</h3>';
+        state.subscriptions.forEach(sub => {
+          const cost = SUBSCRIPTION_COSTS[sub];
+          html += `
+            <div class="upgrade-item subscription-item">
+              <span>${sub}: $${cost}/week</span>
+            </div>
+          `;
+        });
+      }
+
+      container.innerHTML = html;
+    }
+
+    function renderTournaments() {
+      const container = document.getElementById('tournament-list');
+      let html = '';
+
+      TOURNAMENTS.forEach(t => {
+        if (t.phase > state.phase) return;
+        if (!t.req()) return;
+
+        // Check if it's the right time for annual tournaments
+        if (t.freq === 'annual' && t.week && Math.abs(state.week - t.week) > 1) return;
+
+        const canAfford = state.cash >= t.entry;
+        const hasEnergy = state.energy >= 50;
+        const canEnter = canAfford && hasEnergy && !state.currentTournament;
+
+        let classes = 'tournament-item';
+        if (t.major) classes += ' major-tournament';
+
+        html += `
+          <div class="${classes}">
+            <div>
+              <strong>${t.name}</strong>
+              ${t.major ? ' <span style="color:#f1c40f">MAJOR</span>' : ''}
+              <br>
+              <small>${t.rounds} rounds | Field: ${t.field} | ${t.purse > 0 ? `Purse: $${formatNumber(t.purse)}` : 'No purse'}</small>
+            </div>
+            <button onclick="enterTournament('${t.id}')" ${!canEnter ? 'disabled' : ''}>
+              ${t.entry > 0 ? `Enter ($${t.entry})` : 'Enter'}
+            </button>
+          </div>
+        `;
+      });
+
+      if (html === '') {
+        html = '<div style="color: #666;">No tournaments available this week.</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    function renderLog() {
+      const container = document.getElementById('log-entries');
+      container.innerHTML = state.log.map(entry =>
+        `<div class="log-entry log-${entry.type}">[Day ${entry.day}] ${entry.msg}</div>`
+      ).join('');
+    }
+
+    // ============================================
+    // USER INTERACTIONS
+    // ============================================
+    function doAction(id) {
+      const action = ACTIONS[id];
+      if (!action) return;
+
+      const cost = getCost(action);
+      if (state.cash < cost) return;
+      if (state.energy < action.energy) return;
+      if (!action.available()) return;
+
+      state.cash -= cost;
+      state.energy -= action.energy;
+      action.effect();
+      render();
+    }
+
+    function buyUpgrade(id) {
+      const upgrade = UPGRADES.find(u => u.id === id);
+      if (!upgrade) return;
+      if (state.purchasedUpgrades.includes(id)) return;
+      if (state.cash < upgrade.cost) return;
+      if (!upgrade.req()) return;
+
+      state.cash -= upgrade.cost;
+      state.purchasedUpgrades.push(id);
+      upgrade.effect();
+      addLog(`Purchased ${upgrade.name}.`, 'positive');
+      render();
+    }
+
+    window.enterTournament = function(id) {
+      const tournament = TOURNAMENTS.find(t => t.id === id);
+      if (tournament) enterTournament(tournament);
+    };
+
+    function openFocusedPracticeModal() {
+      const modal = document.getElementById('modal-overlay');
+      const body = document.getElementById('modal-body');
+      const buttons = document.getElementById('modal-buttons');
+
+      document.getElementById('modal-title').textContent = 'Focused Practice';
+      body.innerHTML = '<p>Choose a skill to focus on:</p>';
+
+      const skills = ['driving', 'irons', 'shortGame', 'putting', 'mental', 'courseManagement'];
+      const names = { driving: 'Driving', irons: 'Irons', shortGame: 'Short Game', putting: 'Putting', mental: 'Mental', courseManagement: 'Course Management' };
+
+      buttons.innerHTML = skills.map(s =>
+        `<button onclick="doFocusedPractice('${s}')">${names[s]}</button>`
+      ).join('') + '<button onclick="closeModal()">Cancel</button>';
+
+      modal.classList.add('active');
+    }
+
+    window.doFocusedPractice = function(skill) {
+      const gain = 0.3 * getCoachMult();
+      const cap = getSkillCap();
+      state[skill] = Math.min(cap, state[skill] + gain);
+      addLog(`Intensive ${skill} practice. (+${gain.toFixed(2)})`);
+      closeModal();
+      render();
+    };
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('active');
+    }
+
+    window.closeModal = closeModal;
+
+    // ============================================
+    // SAVE/LOAD
+    // ============================================
+    function saveGame() {
+      localStorage.setItem('scratchSave', JSON.stringify(state));
+      addLog('Game saved.', 'info');
+    }
+
+    function loadGame() {
+      const data = localStorage.getItem('scratchSave');
+      if (data) {
+        state = JSON.parse(data);
+        document.body.className = `phase-${state.phase}`;
+        addLog('Game loaded.', 'info');
+        render();
+        renderLog();
+      } else {
+        addLog('No save found.', 'negative');
+      }
+    }
+
+    function resetGame() {
+      if (confirm('Delete all progress and start over?')) {
+        localStorage.removeItem('scratchSave');
+        location.reload();
+      }
+    }
+
+    // ============================================
+    // SPEED CONTROLS
+    // ============================================
+    function setSpeed(speed) {
+      gameSpeed = speed;
+      document.querySelectorAll('.speed-controls button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`speed-${speed}`).classList.add('active');
+
+      if (tickInterval) clearInterval(tickInterval);
+      if (speed > 0) {
+        tickInterval = setInterval(tick, CONFIG.TICK_MS / speed);
+      }
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    function init() {
+      const saveData = localStorage.getItem('scratchSave');
+      if (saveData) {
+        state = JSON.parse(saveData);
+        document.body.className = `phase-${state.phase}`;
+        addLog('Welcome back!', 'info');
+      } else {
+        addLog('Welcome to Scratch.');
+        addLog('You are a 36 handicap. You dream of greatness.');
+        addLog('Practice hard. Enter tournaments. Chase the dream.');
+      }
+
+      document.getElementById('save-btn').addEventListener('click', saveGame);
+      document.getElementById('load-btn').addEventListener('click', loadGame);
+      document.getElementById('reset-btn').addEventListener('click', resetGame);
+      document.getElementById('speed-0').addEventListener('click', () => setSpeed(0));
+      document.getElementById('speed-1').addEventListener('click', () => setSpeed(1));
+      document.getElementById('speed-2').addEventListener('click', () => setSpeed(2));
+      document.getElementById('speed-5').addEventListener('click', () => setSpeed(5));
+
+      render();
+      renderLog();
+      setSpeed(1);
+
+      // Auto-save every 60 seconds
+      setInterval(saveGame, 60000);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
   </script>
-  <script type="module" src="js/main.js"></script>
 </body>
 </html>
