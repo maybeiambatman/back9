@@ -15,52 +15,54 @@
       font-family: 'Courier New', monospace;
       background: #1a1a2e;
       color: #eee;
-      line-height: 1.6;
-      padding: 20px;
-      max-width: 1000px;
+      line-height: 1.3;
+      padding: 10px;
+      max-width: 1100px;
       margin: 0 auto;
+      font-size: 12px;
     }
 
     h1 {
       color: #4ecca3;
       text-align: center;
-      font-size: 2.5em;
+      font-size: 1.8em;
       letter-spacing: 0.3em;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
     }
 
     h2 {
       color: #4ecca3;
       border-bottom: 1px solid #4ecca3;
-      padding-bottom: 5px;
-      margin-bottom: 10px;
-      font-size: 1.1em;
+      padding-bottom: 3px;
+      margin-bottom: 6px;
+      font-size: 0.95em;
     }
 
     #phase-indicator {
       text-align: center;
-      font-size: 1.2em;
-      margin-bottom: 20px;
+      font-size: 1em;
+      margin-bottom: 8px;
     }
 
     #time-display {
       text-align: center;
       color: #888;
-      margin-bottom: 15px;
+      margin-bottom: 8px;
+      font-size: 0.9em;
     }
 
     section {
       background: #16213e;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 5px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      border-radius: 4px;
       border: 1px solid #0f3460;
     }
 
     .stat-grid, .attr-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 4px;
     }
 
     .stat-value {
@@ -72,11 +74,11 @@
       background: #4ecca3;
       color: #1a1a2e;
       border: none;
-      padding: 10px 15px;
-      margin: 5px;
+      padding: 6px 10px;
+      margin: 2px;
       cursor: pointer;
       font-family: inherit;
-      font-size: 0.9em;
+      font-size: 0.85em;
       border-radius: 3px;
       transition: background 0.2s;
     }
@@ -95,8 +97,8 @@
       display: block;
       width: 100%;
       text-align: left;
-      margin: 5px 0;
-      padding: 12px 15px;
+      margin: 2px 0;
+      padding: 6px 10px;
     }
 
     .action-btn .cost {
@@ -109,8 +111,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px;
-      margin: 5px 0;
+      padding: 6px 8px;
+      margin: 3px 0;
       background: #0f3460;
       border-radius: 3px;
     }
@@ -118,14 +120,6 @@
     .upgrade-item.owned {
       opacity: 0.4;
       background: #0a2040;
-    }
-
-    .upgrade-item.locked {
-      opacity: 0.5;
-    }
-
-    .upgrade-item.locked button {
-      display: none;
     }
 
     .upgrade-info {
@@ -138,27 +132,22 @@
     }
 
     .upgrade-desc {
-      font-size: 0.85em;
+      font-size: 0.8em;
       color: #aaa;
     }
 
-    .upgrade-req {
-      font-size: 0.8em;
-      color: #f39c12;
-    }
-
     #log-entries {
-      height: 180px;
+      height: 100px;
       overflow-y: auto;
-      font-size: 0.85em;
-      padding: 10px;
+      font-size: 0.8em;
+      padding: 6px;
       background: #0d1b2a;
       border-radius: 3px;
     }
 
     .log-entry {
-      margin: 3px 0;
-      padding: 2px 0;
+      margin: 2px 0;
+      padding: 1px 0;
       border-bottom: 1px solid #1a1a2e;
     }
 
@@ -169,16 +158,16 @@
 
     footer {
       text-align: center;
-      margin-top: 20px;
-      padding: 15px;
+      margin-top: 8px;
+      padding: 8px;
       background: #16213e;
-      border-radius: 5px;
+      border-radius: 4px;
     }
 
     .columns {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
+      gap: 8px;
     }
 
     @media (max-width: 700px) {
@@ -343,11 +332,9 @@
         <div>Reputation: <span class="stat-value" id="reputation">0</span></div>
         <div>Age: <span class="stat-value" id="age">18</span></div>
       </div>
-      <div style="margin-top: 10px;">
+      <div style="margin-top: 6px;">
         Energy: <span id="energy">100</span>/<span id="maxEnergy">100</span>
-        <div class="progress-bar energy-bar">
-          <div class="progress-fill" id="energy-bar" style="width: 100%"></div>
-        </div>
+        <div class="progress-bar energy-bar"><div class="progress-fill" id="energy-bar" style="width: 100%"></div></div>
       </div>
       <div id="career-stats" class="career-stats" style="display: none;"></div>
     </section>
@@ -944,7 +931,7 @@
     // ============================================
     // TOURNAMENT SYSTEM
     // ============================================
-    function enterTournament(tournament) {
+    function startTournament(tournament) {
       if (state.currentTournament) return;
       if (state.cash < tournament.entry) {
         addLog(`Can't afford $${tournament.entry} entry fee.`, 'negative');
@@ -1302,34 +1289,33 @@
         const meetsReq = upgrade.req();
         const canAfford = state.cash >= upgrade.cost;
 
+        // Hide upgrades that don't meet requirements (unless already owned)
+        if (!meetsReq && !owned) return;
+
         let classes = 'upgrade-item';
         if (owned) classes += ' owned';
-        if (!meetsReq && !owned) classes += ' locked';
 
         html += `
           <div class="${classes}">
             <div class="upgrade-info">
-              <div class="upgrade-name">${upgrade.name}</div>
-              <div class="upgrade-desc">${upgrade.desc}</div>
-              ${!meetsReq && !owned ? '<div class="upgrade-req">Requirements not met</div>' : ''}
+              <span class="upgrade-name">${upgrade.name}</span>
+              <span class="upgrade-desc"> - ${upgrade.desc}</span>
             </div>
-            ${owned ? '<span style="color:#4ecca3">OWNED</span>' :
-              `<button onclick="buyUpgrade('${upgrade.id}')" ${!canAfford || !meetsReq ? 'disabled' : ''}>$${formatNumber(upgrade.cost)}</button>`}
+            ${owned ? '<span style="color:#4ecca3;font-size:0.8em">OWNED</span>' :
+              `<button onclick="buyUpgrade('${upgrade.id}')" ${!canAfford ? 'disabled' : ''}>$${formatNumber(upgrade.cost)}</button>`}
           </div>
         `;
       });
 
       // Show active subscriptions
       if (state.subscriptions.length > 0) {
-        html += '<h3 style="margin-top: 15px; color: #4ecca3;">Weekly Costs</h3>';
-        state.subscriptions.forEach(sub => {
-          const cost = SUBSCRIPTION_COSTS[sub];
-          html += `
-            <div class="upgrade-item subscription-item">
-              <span>${sub}: $${cost}/week</span>
-            </div>
-          `;
-        });
+        html += '<div style="margin-top: 8px; color: #4ecca3; font-size: 0.85em;">Weekly: ';
+        html += state.subscriptions.map(sub => `${sub} $${SUBSCRIPTION_COSTS[sub]}`).join(', ');
+        html += '</div>';
+      }
+
+      if (html === '') {
+        html = '<div style="color: #666; font-size: 0.85em;">No upgrades available yet.</div>';
       }
 
       container.innerHTML = html;
@@ -1356,20 +1342,18 @@
         html += `
           <div class="${classes}">
             <div>
-              <strong>${t.name}</strong>
-              ${t.major ? ' <span style="color:#f1c40f">MAJOR</span>' : ''}
-              <br>
-              <small>${t.rounds} rounds | Field: ${t.field} | ${t.purse > 0 ? `Purse: $${formatNumber(t.purse)}` : 'No purse'}</small>
+              <strong>${t.name}</strong>${t.major ? ' <span style="color:#f1c40f">★</span>' : ''}
+              <span style="color:#888;font-size:0.85em;margin-left:8px;">${t.rounds}R | ${t.purse > 0 ? '$'+formatNumber(t.purse) : 'Amateur'}</span>
             </div>
             <button onclick="enterTournament('${t.id}')" ${!canEnter ? 'disabled' : ''}>
-              ${t.entry > 0 ? `Enter ($${t.entry})` : 'Enter'}
+              ${t.entry > 0 ? `$${t.entry}` : 'Enter'}
             </button>
           </div>
         `;
       });
 
       if (html === '') {
-        html = '<div style="color: #666;">No tournaments available this week.</div>';
+        html = '<div style="color: #666; font-size: 0.85em;">No tournaments available this week.</div>';
       }
 
       container.innerHTML = html;
@@ -1416,7 +1400,7 @@
 
     window.enterTournament = function(id) {
       const tournament = TOURNAMENTS.find(t => t.id === id);
-      if (tournament) enterTournament(tournament);
+      if (tournament) startTournament(tournament);
     };
 
     function openFocusedPracticeModal() {
